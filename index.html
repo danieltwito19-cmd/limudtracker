@@ -1,0 +1,3097 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מעקב לימודים</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#333333">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="לימודים">
+
+
+
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --header-bg: #333333;
+            --row-bg: #ffffff;
+            --border-color: #e0e0e0;
+            --text-main: #333;
+            --text-muted: #9e9e9e;
+            --color-none: #e0e0e0;
+            --color-partial: #ff9800;
+            --color-complete: #4caf50;
+            --primary: #2196f3;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+        }
+
+        header {
+            background-color: var(--header-bg);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: normal;
+        }
+
+        .add-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+        }
+
+        main {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: var(--row-bg);
+        }
+
+        th, td {
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 10px;
+            text-align: center;
+        }
+
+        th {
+            color: var(--text-muted);
+            font-weight: normal;
+            font-size: 14px;
+            background-color: var(--bg-color);
+        }
+
+        .study-name {
+            text-align: right;
+            font-size: 16px;
+            color: var(--primary);
+            width: 40%;
+        }
+
+        .day-cell {
+            cursor: pointer;
+            width: 15%;
+            transition: background 0.2s;
+        }
+
+        .day-cell:hover {
+            background-color: #f0f0f0;
+        }
+
+        .status-circle {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid var(--color-none);
+            display: inline-block;
+            box-sizing: border-box;
+        }
+
+        .status-circle.partial {
+            border-color: var(--color-partial);
+            background: linear-gradient(90deg, var(--color-partial) 50%, transparent 50%);
+        }
+
+        .status-circle.complete {
+            border-color: var(--color-complete);
+            background-color: var(--color-complete);
+        }
+
+        .status-text {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            display: block;
+        }
+
+        /* Modals */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 520px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            max-height: 90vh;
+            overflow-y: auto;
+            margin: auto;
+        }
+
+        .modal-header {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        .btn-row {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button.primary {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        button.secondary {
+            background-color: transparent;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        /* Track List Styles */
+        .tracked-items {
+            margin-top: 15px;
+            max-height: 150px;
+            overflow-y: auto;
+            border-top: 1px solid var(--border-color);
+            padding-top: 10px;
+        }
+
+        .tracked-item {
+            display: flex;
+            justify-content: space-between;
+            background: #f9f9f9;
+            padding: 5px 10px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .delete-item {
+            color: red;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* ===== Grid tracker style (Mishna Tracker) ===== */
+        .tracker-grid-container {
+            margin-top: 12px;
+        }
+
+        .tracker-grid-label {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .tracker-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            max-height: 260px;
+            overflow-y: auto;
+            padding: 4px 0;
+        }
+
+        .tracker-cell {
+            width: 44px;
+            height: 44px;
+            border-radius: 6px;
+            border: 2px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            cursor: pointer;
+            background: #fff;
+            transition: background 0.15s, border-color 0.15s;
+            user-select: none;
+            font-family: inherit;
+        }
+
+        .tracker-cell:hover {
+            border-color: var(--primary);
+            background: #e3f2fd;
+        }
+
+        .tracker-cell.selected {
+            background: var(--color-complete);
+            border-color: #388e3c;
+            color: white;
+            font-weight: bold;
+        }
+
+        .tracker-cell.already-learned {
+            background: #c8e6c9;
+            border-color: #81c784;
+            color: #2e7d32;
+            cursor: not-allowed;
+            opacity: 0.75;
+        }
+
+        .tracker-cell.already-learned:hover {
+            background: #c8e6c9;
+            border-color: #81c784;
+        }
+
+        /* Masechet selection grid */
+        .masechet-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 8px;
+        }
+
+        .masechet-btn {
+            padding: 7px 4px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background: #fff;
+            cursor: pointer;
+            font-size: 13px;
+            font-family: inherit;
+            text-align: center;
+            transition: background 0.15s, border-color 0.15s;
+        }
+
+        .masechet-btn:hover {
+            background: #e3f2fd;
+            border-color: var(--primary);
+        }
+
+        .masechet-btn.selected {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* Perek selection grid */
+        .perek-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            max-height: 180px;
+            overflow-y: auto;
+            margin-top: 8px;
+        }
+
+        .perek-btn {
+            padding: 6px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background: #fff;
+            cursor: pointer;
+            font-size: 13px;
+            font-family: inherit;
+            transition: background 0.15s, border-color 0.15s;
+        }
+
+        .perek-btn:hover {
+            background: #e3f2fd;
+            border-color: var(--primary);
+        }
+
+        .perek-btn.selected {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .step-label {
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 4px;
+            color: #555;
+        }
+
+        .section-divider {
+            border: none;
+            border-top: 1px solid var(--border-color);
+            margin: 12px 0;
+        }
+
+        /* Stats Modal */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 16px 0;
+        }
+
+        .stat-card {
+            background: var(--bg-color);
+            border-radius: 8px;
+            padding: 14px 12px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--primary);
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            display: block;
+        }
+
+        .streak-bar {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .streak-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 3px;
+            background: var(--color-none);
+        }
+
+        .streak-dot.done {
+            background: var(--color-complete);
+        }
+
+        .streak-dot.partial {
+            background: var(--color-partial);
+        }
+
+        .btn-danger {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .btn-danger:hover {
+            background-color: #d32f2f;
+        }
+
+        #syncIndicator {
+            transition: opacity 0.3s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        /* אינדיקטור אופליין קבוע */
+        #offlineBanner {
+            display: none;
+            position: fixed;
+            bottom: 16px;
+            left: 16px;
+            background: #b71c1c;
+            color: white;
+            padding: 7px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 9998;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            animation: pulse-offline 2.5s infinite;
+        }
+        #offlineBanner.show { display: flex; }
+
+        #pendingDot {
+            display: none;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ffeb3b;
+            flex-shrink: 0;
+        }
+        #pendingDot.show { display: block; }
+
+        @keyframes pulse-offline {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.75; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>לימודים</h1>
+        <div style="display:flex; align-items:center; gap:10px;">
+            <button class="add-btn" title="ייצוא כל הלימודים לאקסל" onclick="exportToExcel()" style="font-size:20px;">📥</button>
+            <button class="add-btn" onclick="openAddModal()">+</button>
+        </div>
+    </header>
+
+    <main>
+        <table id="trackerTable">
+            <thead>
+                <tr id="daysHeader"></tr>
+            </thead>
+            <tbody id="studiesBody"></tbody>
+        </table>
+    </main>
+
+    <!-- Modal: הוסף לימוד חדש -->
+    <div class="modal-overlay" id="addModal">
+        <div class="modal-content">
+            <div class="modal-header">הוסף לימוד חדש</div>
+            <div class="form-group">
+                <label>סוג הלימוד:</label>
+                <select id="studyType" onchange="updateGoalUnits()">
+                    <option value="bavli">תלמוד בבלי</option>
+                    <option value="mishna">משנה</option>
+                    <option value="torah">תורה</option>
+                    <option value="nach">נ"ך</option>
+                    <option value="rambam">משנה תורה לרמב"ם</option>
+                    <option value="shulchanAruch">שולחן ערוך</option>
+                    <option value="mishnaBrura">משנה ברורה</option>
+                    <option value="tanya">תניא</option>
+                    <option value="mesilatYesharim">מסילת ישרים</option>
+                    <option value="chovatHaLevavot">חובת הלבבות</option>
+                    <option value="kuzari">כוזרי</option>
+                    <option value="seferHaIkarim">ספר העיקרים</option>
+                    <option value="rambamIntro">הקדמות הרמב"ם למשנה</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>שם הלימוד (אופציונלי):</label>
+                <input type="text" id="studyName" placeholder="לדוגמה: הדף היומי">
+            </div>
+            <div class="form-group">
+                <label>מטרה יומית:</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="number" id="goalAmount" value="1" min="1" style="width: 50%;">
+                    <select id="goalUnit" style="width: 50%;">
+                        <option value="pages">דפים</option>
+                    </select>
+                </div>
+            </div>
+            <div class="btn-row">
+                <button class="secondary" onclick="closeModals()">ביטול</button>
+                <button class="primary" onclick="saveStudy()">שמור</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: דיווח לימוד -->
+    <div class="modal-overlay" id="trackModal">
+        <div class="modal-content">
+            <div class="modal-header" id="trackModalTitle">דיווח לימוד</div>
+
+            <!-- שלב 1: בחירת מסכת/ספר/חלק (כללי) -->
+            <div id="stepMasechet">
+                <div class="step-label" id="step1Label">בחר מסכת:</div>
+                <div class="masechet-grid" id="masechetGrid"></div>
+            </div>
+
+            <hr class="section-divider" id="dividerAfterMasechet" style="display:none;">
+
+            <!-- שלב 2: בחירת משנה/פרק/הלכה וכו' -->
+            <div id="stepPerekPick">
+                <div class="step-label" id="step2Label">בחר פרק:</div>
+                <div class="perek-grid" id="perekPickGrid"></div>
+            </div>
+
+            <hr class="section-divider" id="dividerAfterPerek" style="display:none;">
+
+            <!-- שלב 3: גריד בחירה (דפים/פרקים/משניות/הלכות/סעיפים וכו') -->
+            <div id="gridSection" style="display:none;">
+                <div class="step-label" id="gridLabel">בחר פריטים שלמדת:</div>
+                <div style="font-size:11px; color:#888; margin-bottom:4px;">🟢 ירוק בהיר = כבר נלמד בעבר | 🟩 ירוק כהה = נבחר היום</div>
+                <div class="tracker-grid" id="mainGrid"></div>
+            </div>
+
+            <hr class="section-divider">
+
+            <div class="tracked-items" id="trackedItemsList"></div>
+
+            <div class="btn-row">
+                <button class="primary" onclick="finishTracking()">סיום</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: סטטיסטיקת לימוד -->
+    <div class="modal-overlay" id="statsModal">
+        <div class="modal-content" style="max-width:600px;">
+            <div class="modal-header" id="statsModalTitle">סטטיסטיקה</div>
+
+            <!-- כרטיסיות סטטיסטיקה -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-value" id="statTotalDays">0</span>
+                    <span class="stat-label">ימים עם לימוד</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="statStreak">0</span>
+                    <span class="stat-label">רצף ימים נוכחי</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="statBestStreak">0</span>
+                    <span class="stat-label">רצף מקסימלי</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="statTotalUnits">0</span>
+                    <span class="stat-label" id="statUnitsLabel">יחידות שנלמדו</span>
+                </div>
+            </div>
+
+            <!-- אחוז התקדמות -->
+            <div id="statProgressSection" style="margin: 10px 0 6px;">
+                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                    <span style="color:var(--text-muted);">התקדמות כוללת</span>
+                    <span id="statProgressPct" style="font-weight:bold; color:var(--primary);">0%</span>
+                </div>
+                <div style="background:var(--color-none); border-radius:4px; height:10px; overflow:hidden;">
+                    <div id="statProgressBar" style="height:100%; width:0%; background:var(--color-complete); transition:width 0.4s;"></div>
+                </div>
+                <div style="font-size:12px; color:var(--text-muted); margin-top:3px;" id="statProgressDetail"></div>
+            </div>
+
+            <!-- סרגל 30 ימים -->
+            <div style="margin: 10px 0 4px; font-size: 13px; color: var(--text-muted);">30 הימים האחרונים:</div>
+            <div class="streak-bar" id="statStreakBar"></div>
+
+            <hr class="section-divider" style="margin-top:16px;">
+
+            <!-- בחירת יחידה לתצוגת פרוגרס מפורטת -->
+            <div id="statsBrowseSection">
+                <div style="font-size:13px; font-weight:bold; margin-bottom:6px; color:#555;" id="statsBrowseLabel">בחר להצגה מפורטת:</div>
+
+                <!-- שלב 1: בחירת קבוצה (מסכת / ספר / חלק / מאמר וכו') -->
+                <div id="statsBrowseLevel1">
+                    <div class="masechet-grid" id="statsBrowseGrid1"></div>
+                </div>
+
+                <!-- שלב 2: בחירת תת-קבוצה (הלכה / ספר / פרשה וכו') -->
+                <div id="statsBrowseLevel2" style="display:none; margin-top:8px;">
+                    <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;" id="statsBrowseLabel2"></div>
+                    <div class="masechet-grid" id="statsBrowseGrid2"></div>
+                </div>
+
+                <!-- גריד תוצאה -->
+                <div id="statsBrowseResult" style="display:none; margin-top:10px;">
+                    <div style="font-size:12px; color:var(--text-muted); margin-bottom:6px;" id="statsBrowseResultLabel"></div>
+                    <div class="tracker-grid" id="statsBrowseResultGrid" style="max-height:220px;"></div>
+                </div>
+            </div>
+
+            <hr class="section-divider" style="margin-top:16px;">
+
+            <div class="btn-row" style="justify-content: space-between;">
+                <button class="btn-danger" id="deleteStudyBtn">🗑 מחק לימוד</button>
+                <div style="display:flex; gap:8px;">
+                    <button class="secondary" onclick="exportToExcel()" style="background:#e8f5e9; border-color:#81c784; color:#2e7d32;">📥 ייצוא אקסל</button>
+                    <button class="secondary" onclick="closeModals()">סגור</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: אישור מחיקה -->
+    <div class="modal-overlay" id="deleteConfirmModal">
+        <div class="modal-content" style="max-width:360px; text-align:center;">
+            <div class="modal-header" style="justify-content:center;">🗑 מחיקת לימוד</div>
+            <p id="deleteConfirmText" style="margin: 16px 0; font-size: 15px; color: var(--text-main);"></p>
+            <p style="font-size:13px; color:#f44336; margin-bottom:20px;">כל נתוני המעקב יימחקו לצמיתות.</p>
+            <div class="btn-row" style="justify-content:center;">
+                <button class="secondary" onclick="closeDeleteConfirm()">ביטול</button>
+                <button class="btn-danger" id="confirmDeleteBtn">מחק</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- אינדיקטור סנכרון -->
+    <div id="syncIndicator" style="position:fixed; bottom:16px; left:16px; background:#333; color:white; padding:7px 14px; border-radius:20px; font-size:12px; display:none; z-index:9999; align-items:center; gap:8px;">
+        <span id="syncIcon">☁</span>
+        <span id="syncText">מסנכרן...</span>
+    </div>
+
+    <!-- אינדיקטור אופליין קבוע -->
+    <div id="offlineBanner">
+        <span>📴</span>
+        <span id="offlineText">אין חיבור לרשת</span>
+        <div id="pendingDot" title="יש שינויים ממתינים לסנכרון"></div>
+    </div>
+
+    <script>
+    // =============================
+    //  נתוני תלמוד בבלי — 37 מסכתות (דפים לפי מהדורת וילנא, מתחילים מדף ב')
+    // =============================
+    const bavliData = {
+        // סדר זרעים
+        "ברכות": 63,
+        // סדר מועד
+        "שבת": 156,
+        "עירובין": 104,
+        "פסחים": 120,
+        "שקלים": 21, // ירושלמי בתוך הבבלי
+        "יומא": 87,
+        "סוכה": 55,
+        "ביצה": 39,
+        "ראש השנה": 34,
+        "תענית": 30,
+        "מגילה": 31,
+        "מועד קטן": 28,
+        "חגיגה": 26,
+        // סדר נשים
+        "יבמות": 121,
+        "כתובות": 111,
+        "נדרים": 90,
+        "נזיר": 65,
+        "סוטה": 48,
+        "גיטין": 89,
+        "קידושין": 81,
+        // סדר נזיקין
+        "בבא קמא": 118,
+        "בבא מציעא": 118,
+        "בבא בתרא": 175,
+        "סנהדרין": 112,
+        "מכות": 23,
+        "שבועות": 48,
+        "עבודה זרה": 75,
+        "הוריות": 13,
+        // סדר קדשים
+        "זבחים": 120,
+        "מנחות": 109,
+        "חולין": 141,
+        "בכורות": 60,
+        "ערכין": 33,
+        "תמורה": 33,
+        "כריתות": 27,
+        "מעילה": 21,
+        "תמיד": 9,
+        // סדר טהרות
+        "נידה": 72
+    };
+
+    // =============================
+    //  נתוני משנה — 63 מסכתות עם פרקים ומשניות בכל פרק
+    //  [מספר משניות בכל פרק]
+    // =============================
+    const mishnaData = {
+        // סדר זרעים
+        "ברכות":      [5,8,5,7,5,8,5,8,3],
+        "פאה":        [6,8,8,10,8,10,8,9],
+        "דמאי":       [4,5,6,7,11,12,8],
+        "כלאים":      [9,11,7,10,8,9,8,6,10],
+        "שביעית":     [8,10,10,10,9,6,7,11,9,9],
+        "תרומות":     [10,6,9,13,9,6,7,12,7,12,10],
+        "מעשרות":     [8,8,10,6,8],
+        "מעשר שני":   [7,10,13,12,15],
+        "חלה":        [9,8,10,11],
+        "ערלה":       [9,17,9],
+        "ביכורים":    [11,11,12,5],
+        // סדר מועד
+        "שבת":        [11,7,6,2,4,10,4,7,7,6,6,6,7,4,3,8,8,3,6,5,3,6,5],
+        "עירובין":    [10,6,9,11,9,10,11,11,4,15],
+        "פסחים":      [7,8,8,9,10,6,13,8,11,9],
+        "שקלים":      [7,5,4,9,6,7,7,8],
+        "יומא":       [8,7,11,6,7,8,5,9],
+        "סוכה":       [11,9,15,10,8],
+        "ביצה":       [10,10,8,7,7],
+        "ראש השנה":   [9,8,9,9],
+        "תענית":      [7,10,9,8],
+        "מגילה":      [11,6,6,10],
+        "מועד קטן":   [10,5,9],
+        "חגיגה":      [8,7,8],
+        // סדר נשים
+        "יבמות":      [4,10,10,13,13,6,6,6,6,9,7,6,13,9,10,7,13],
+        "כתובות":     [10,10,8,14,9,19,10,8,9,6,6,4],
+        "נדרים":      [4,5,11,8,6,10,9,7,10,8,12],
+        "נזיר":       [7,10,7,7,7,11,4,2,5],
+        "סוטה":       [9,6,8,3,5,4,8,7,15],
+        "גיטין":      [6,7,8,9,9,7,9,10,10],
+        "קידושין":    [10,10,13,14],
+        // סדר נזיקין
+        "בבא קמא":    [4,6,11,9,7,6,7,7,12,10],
+        "בבא מציעא":  [8,11,12,12,11,8,11,9,13,6],
+        "בבא בתרא":   [6,14,8,9,11,8,4,9,10,8],
+        "סנהדרין":    [6,5,7,5,5,6,11,7,6,6,6],
+        "מכות":       [10,8,16],
+        "שבועות":     [7,5,11,13,5,7,8,6],
+        "עדויות":     [14,10,12,12,7,3,9,7],
+        "עבודה זרה":  [9,7,10,12,12],
+        "אבות":       [18,16,18,22,23,11],
+        "הוריות":     [5,7,8],
+        // סדר קדשים
+        "זבחים":      [4,5,6,6,8,7,6,12,7,8,8,6,8,10,9],
+        "מנחות":      [4,5,7,5,9,7,6,7,9,9,9,5,11],
+        "חולין":      [7,10,7,7,5,7,6,6,8,4,2,5],
+        "בכורות":     [7,9,4,10,6,12,7,10,8],
+        "ערכין":      [4,6,5,4,6,5,5,7,8],
+        "תמורה":      [6,3,4,4,6,5,6],
+        "כריתות":     [2,6,10,3,8,9],
+        "מעילה":      [4,9,3,6,5,6],
+        "תמיד":       [4,5,9,3,6,3,4],
+        "מידות":      [9,6,8,7,4],
+        "קינים":      [4,5,6],
+        // סדר טהרות
+        "כלים":       [9,8,7,4,11,4,6,11,8,8,9,8,7,8,7,8,17,9,10,7,3,10,5,17,9,9,12,10,8,4],
+        "אהלות":      [8,7,7,3,7,7,6,6,15,7,9,8,6,7,10,5,5,10,16,2],
+        "נגעים":      [6,5,8,11,5,8,5,10,3,10,12,7,12,13],
+        "פרה":        [4,5,11,4,9,5,12,11,9,6,9,11],
+        "טהרות":      [9,8,8,13,9,10,9,9,9,8],
+        "מקוואות":    [8,10,4,5,6,11,7,5,7,8],
+        "נידה":       [7,7,7,7,9,14,5,4,11,8],
+        "מכשירין":    [6,11,8,10,11,8],
+        "זבים":       [6,4,3,7,12],
+        "טבול יום":   [5,8,6,7],
+        "ידיים":      [5,4,5,8],
+        "עוקצים":     [6,10,12]
+    };
+
+    // רשימת שמות המסכתות לפי סדרים
+    const masechtotBavliList = Object.keys(bavliData);
+    const masechtotMishnaList = Object.keys(mishnaData);
+
+    // =============================
+    //  נתוני תורה - 54 פרשיות עם 7 עליות כל אחת
+    // =============================
+    const torahParshiyot = [
+        "בראשית", "נח", "לך לך", "וירא", "חיי שרה", "תולדות", "ויצא", "וישלח", "וישב", "מקץ", "ויגש", "ויחי",
+        "שמות", "וארא", "בא", "בשלח", "יתרו", "משפטים", "תרומה", "תצווה", "כי תשא", "ויקהל", "פקודי",
+        "ויקרא", "צו", "שמיני", "תזריע", "מצורע", "אחרי מות", "קדושים", "אמור", "בהר", "בחוקתי",
+        "במדבר", "נשא", "בהעלתך", "שלח", "קרח", "חקת", "בלק", "פינחס", "מטות", "מסעי",
+        "דברים", "ואתחנן", "עקב", "ראה", "שופטים", "כי תצא", "כי תבוא", "נצבים", "וילך", "האזינו", "וזאת הברכה"
+    ];
+
+    // =============================
+    //  נתוני נ"ך - ספרים ופרקים
+    // =============================
+    const neviimData = {
+        // נביאים ראשונים
+        "יהושע": 24, "שופטים": 21, "שמואל א": 31, "שמואל ב": 24, "מלכים א": 22, "מלכים ב": 25,
+        // נביאים אחרונים
+        "ישעיהו": 66, "ירמיהו": 52, "יחזקאל": 48,
+        "הושע": 14, "יואל": 4, "עמוס": 9, "עובדיה": 1, "יונה": 4, "מיכה": 7,
+        "נחום": 3, "חבקוק": 3, "צפניה": 3, "חגי": 2, "זכריה": 14, "מלאכי": 3
+    };
+    const ketuvimData = {
+        "תהלים": 150, "משלי": 31, "איוב": 42,
+        "שיר השירים": 8, "רות": 4, "איכה": 5, "קהלת": 12, "אסתר": 10,
+        "דניאל": 12, "עזרא": 10, "נחמיה": 13, "דברי הימים א": 29, "דברי הימים ב": 36
+    };
+
+    // =============================
+    //  נתוני משנה תורה לרמב"ם - 14 ספרים, הלכות, פרקים
+    //  מבנה: ספר → הלכות → מספר פרקים
+    // =============================
+    const rambamData = {
+        "ספר המדע": {
+            "יסודי התורה": 10, "דעות": 7, "תלמוד תורה": 7, "עבודה זרה": 12, "תשובה": 10
+        },
+        "ספר אהבה": {
+            "קריאת שמע": 4, "תפילה": 15, "תפילין מזוזה וספר תורה": 10, "ציצית": 4,
+            "ברכות": 11, "מילה": 3, "סדר תפילות": 14
+        },
+        "ספר זמנים": {
+            "שבת": 30, "עירובין": 9, "שביתת עשור": 4, "יום טוב": 9, "חמץ ומצה": 8,
+            "שופר סוכה ולולב": 8, "שקלים": 5, "קידוש החודש": 19, "תעניות": 5, "מגילה וחנוכה": 4
+        },
+        "ספר נשים": {
+            "אישות": 25, "גירושין": 15, "ייבום וחליצה": 9, "נערה בתולה": 5, "סוטה": 6
+        },
+        "ספר קדושה": {
+            "איסורי ביאה": 22, "מאכלות אסורות": 18, "שחיטה": 14
+        },
+        "ספר הפלאה": {
+            "שבועות": 12, "נדרים": 14, "נזירות": 10, "ערכין וחרמים": 9
+        },
+        "ספר זרעים": {
+            "כלאים": 10, "מתנות עניים": 10, "תרומות": 15, "מעשרות": 12,
+            "מעשר שני ונטע רבעי": 11, "ביכורים": 4, "שמיטה ויובל": 13
+        },
+        "ספר עבודה": {
+            "בית הבחירה": 9, "כלי המקדש": 10, "ביאת המקדש": 10, "איסורי מזבח": 8,
+            "מעשה הקרבנות": 17, "תמידין ומוספין": 11, "פסולי המוקדשין": 19,
+            "עבודת יום הכיפורים": 6, "מעילה": 9
+        },
+        "ספר קרבנות": {
+            "קרבן פסח": 10, "חגיגה": 4, "בכורות": 10, "שגגות": 16,
+            "מחוסרי כפרה": 5, "תמורה": 5
+        },
+        "ספר טהרה": {
+            "טומאת מת": 26, "פרה אדומה": 14, "טומאת צרעת": 16, "מטמאי משכב ומושב": 13,
+            "שאר אבות הטומאות": 17, "טומאת אוכלין": 17, "כלים": 26, "מקוואות": 11
+        },
+        "ספר נזיקין": {
+            "נזקי ממון": 15, "גנבה": 15, "גזילה ואבידה": 18, "חובל ומזיק": 14, "רוצח ושמירת נפש": 13
+        },
+        "ספר קניין": {
+            "מכירה": 30, "זכייה ומתנה": 13, "שכנים": 15, "שלוחין ושותפין": 11, "עבדים": 9
+        },
+        "ספר משפטים": {
+            "שכירות": 13, "שאלה ופיקדון": 11, "מלווה ולווה": 16, "טוען ונטען": 17, "נחלות": 11
+        },
+        "ספר שופטים": {
+            "סנהדרין והעונשין": 26, "עדות": 22, "ממרים": 10, "אבל": 14, "מלכים ומלחמות": 12
+        }
+    };
+
+    // =============================
+    //  נתוני שולחן ערוך - 4 חלקים, סימנים, מספר סעיפים אמיתי
+    // =============================
+    // אורח חיים - 697 סימנים
+    const shulchanAruchOrachChayim = {
+        1:9,2:7,3:17,4:23,5:4,6:4,7:5,8:16,9:4,10:6,
+        11:16,12:3,13:3,14:4,15:4,16:4,17:3,18:3,19:2,20:2,
+        21:4,22:4,23:4,24:7,25:14,26:4,27:22,28:6,29:2,30:5,
+        31:8,32:72,33:5,34:5,35:4,36:5,37:4,38:18,39:15,40:7,
+        41:8,42:4,43:7,44:2,45:3,46:11,47:15,48:4,49:4,50:2,
+        51:10,52:7,53:25,54:4,55:23,56:2,57:3,58:12,59:6,60:5,
+        61:3,62:6,63:4,64:3,65:4,66:10,67:7,68:4,69:4,70:4,
+        71:5,72:3,73:3,74:6,75:7,76:7,77:4,78:3,79:12,80:3,
+        81:2,82:4,83:6,84:4,85:4,86:7,87:7,88:3,89:8,90:23,
+        91:6,92:4,93:7,94:10,95:5,96:4,97:4,98:3,99:5,100:2,
+        101:4,102:7,103:5,104:8,105:5,106:7,107:5,108:7,109:2,110:4,
+        111:5,112:4,113:10,114:8,115:6,116:7,117:6,118:4,119:6,120:2,
+        121:7,122:7,123:6,124:14,125:7,126:7,127:5,128:45,129:3,130:4,
+        131:7,132:3,133:3,134:2,135:4,136:4,137:4,138:3,139:2,140:2,
+        141:8,142:4,143:4,144:3,145:5,146:4,147:6,148:5,149:2,150:2,
+        151:12,152:8,153:21,154:24,155:3,156:4,157:4,158:3,159:3,160:2,
+        161:4,162:12,163:4,164:4,165:4,166:4,167:22,168:18,169:2,170:22,
+        171:4,172:14,173:7,174:7,175:4,176:4,177:8,178:8,179:12,180:5,
+        181:3,182:4,183:14,184:8,185:5,186:4,187:8,188:14,189:9,190:4,
+        191:4,192:3,193:3,194:2,195:16,196:6,197:5,198:10,199:12,200:8,
+        201:3,202:22,203:11,204:6,205:5,206:15,207:8,208:18,209:9,210:11,
+        211:7,212:5,213:7,214:4,215:7,216:10,217:8,218:10,219:6,220:10,
+        221:7,222:9,223:15,224:13,225:9,226:3,227:16,228:8,229:11,230:5,
+        231:7,232:14,233:7,234:4,235:4,236:3,237:7,238:7,239:8,240:14,
+        241:3,242:9,243:4,244:12,245:7,246:27,247:13,248:18,249:16,250:9,
+        251:14,252:23,253:23,254:7,255:4,256:4,257:9,258:12,259:10,260:4,
+        261:6,262:9,263:20,264:3,265:11,266:22,267:20,268:10,269:4,270:5,
+        271:16,272:14,273:12,274:2,275:9,276:5,277:5,278:4,279:3,280:4,
+        281:4,282:10,283:5,284:5,285:4,286:5,287:3,288:18,289:6,290:10,
+        291:6,292:2,293:4,294:6,295:7,296:21,297:4,298:17,299:15,300:6,
+        301:65,302:3,303:26,304:12,305:23,306:22,307:27,308:52,309:8,310:8,
+        311:10,312:14,313:12,314:12,315:14,316:22,317:7,318:32,319:9,320:22,
+        321:26,322:10,323:9,324:12,325:14,326:12,327:8,328:50,329:6,330:10,
+        331:11,332:5,333:9,334:8,335:4,336:3,337:7,338:10,339:8,340:14,
+        341:3,342:2,343:4,344:3,345:22,346:4,347:4,348:4,349:5,350:3,
+        351:8,352:8,353:7,354:3,355:4,356:2,357:2,358:21,359:12,360:8,
+        361:4,362:6,363:6,364:8,365:7,366:10,367:9,368:7,369:6,370:6,
+        371:5,372:16,373:4,374:14,375:2,376:7,377:4,378:7,379:5,380:8,
+        381:6,382:6,383:4,384:2,385:5,386:4,387:7,388:3,389:9,390:12,
+        391:4,392:5,393:4,394:5,395:3,396:5,397:3,398:9,399:2,400:3,
+        401:8,402:12,403:9,404:6,405:8,406:6,407:5,408:7,409:9,410:7,
+        411:10,412:6,413:10,414:3,415:2,416:4,417:4,418:14,419:7,420:4,
+        421:6,422:9,423:4,424:6,425:2,426:5,427:3,428:4,429:4,430:7,
+        431:8,432:4,433:11,434:7,435:7,436:4,437:6,438:11,439:9,440:4,
+        441:8,442:20,443:8,444:12,445:8,446:8,447:19,448:19,449:31,450:23,
+        451:74,452:6,453:24,454:15,455:12,456:3,457:4,458:10,459:10,460:10,
+        461:5,462:7,463:4,464:10,465:6,466:6,467:9,468:14,469:9,470:16,
+        471:15,472:20,473:23,474:5,475:20,476:18,477:5,478:4,479:4,480:2,
+        481:5,482:6,483:6,484:4,485:7,486:5,487:7,488:8,489:37,490:9,
+        491:4,492:10,493:6,494:3,495:6,496:13,497:10,498:10,499:3,500:5,
+        501:12,502:2,503:4,504:4,505:2,506:8,507:6,508:23,509:9,510:9,
+        511:11,512:8,513:15,514:13,515:8,516:12,517:6,518:14,519:12,520:6,
+        521:7,522:3,523:11,524:17,525:11,526:8,527:16,528:4,529:4,530:11,
+        531:9,532:3,533:15,534:8,535:3,536:6,537:6,538:5,539:5,540:5,
+        541:9,542:3,543:5,544:4,545:7,546:6,547:8,548:22,549:8,550:12,
+        551:12,552:4,553:3,554:4,555:3,556:4,557:3,558:2,559:11,560:10,
+        561:5,562:3,563:3,564:2,565:5,566:6,567:4,568:9,569:4,570:7,
+        571:4,572:3,573:9,574:8,575:18,576:4,577:4,578:5,579:11,580:4,
+        581:10,582:15,583:7,584:9,585:7,586:20,587:10,588:8,589:10,590:6,
+        591:9,592:7,593:5,594:6,595:4,596:4,597:3,598:3,599:3,600:6,
+        601:3,602:2,603:4,604:4,605:4,606:8,607:13,608:11,609:7,610:9,
+        611:7,612:12,613:18,614:13,615:5,616:4,617:9,618:3,619:5,620:9,
+        621:7,622:5,623:7,624:9,625:7,626:10,627:8,628:8,629:32,630:16,
+        631:17,632:5,633:16,634:12,635:5,636:4,637:15,638:17,639:26,640:8,
+        641:8,642:6,643:6,644:7,645:4,646:6,647:6,648:24,649:28,650:7,
+        651:20,652:9,653:7,654:6,655:5,656:3,657:3,658:12,659:7,660:5,
+        661:6,662:6,663:4,664:4,665:3,666:2,667:3,668:3,669:3,670:8,
+        671:9,672:4,673:7,674:8,675:3,676:4,677:4,678:5,679:5,680:2,
+        681:4,682:4,683:4,684:6,685:4,686:7,687:7,688:9,689:11,690:22,
+        691:7,692:5,693:5,694:6,695:4,696:4,697:8
+    };
+
+    // יורה דעה - 403 סימנים
+    const shulchanAruchYoreDea = {
+        1:9,2:7,3:6,4:5,5:7,6:5,7:6,8:4,9:4,10:4,
+        11:7,12:5,13:4,14:7,15:7,16:5,17:5,18:18,19:7,20:5,
+        21:3,22:6,23:3,24:8,25:3,26:4,27:4,28:6,29:6,30:7,
+        31:12,32:3,33:9,34:5,35:4,36:5,37:3,38:9,39:13,40:16,
+        41:4,42:8,43:5,44:3,45:3,46:3,47:5,48:5,49:6,50:4,
+        51:3,52:3,53:6,54:2,55:3,56:3,57:5,58:8,59:10,60:4,
+        61:2,62:4,63:3,64:16,65:4,66:22,67:12,68:10,69:22,70:4,
+        71:9,72:10,73:4,74:7,75:6,76:5,77:5,78:5,79:6,80:5,
+        81:3,82:6,83:8,84:18,85:4,86:7,87:11,88:4,89:10,90:18,
+        91:7,92:10,93:9,94:4,95:4,96:7,97:11,98:9,99:9,100:4,
+        101:5,102:5,103:5,104:7,105:12,106:6,107:5,108:7,109:7,110:11,
+        111:10,112:7,113:7,114:7,115:5,116:5,117:10,118:11,119:17,120:4,
+        121:9,122:5,123:13,124:12,125:10,126:8,127:5,128:4,129:2,130:9,
+        131:5,132:5,133:7,134:10,135:7,136:5,137:8,138:5,139:6,140:5,
+        141:9,142:20,143:4,144:2,145:6,146:9,147:10,148:8,149:4,150:4,
+        151:15,152:5,153:5,154:4,155:5,156:6,157:5,158:4,159:3,160:13,
+        161:8,162:7,163:8,164:7,165:3,166:4,167:12,168:16,169:4,170:8,
+        171:5,172:4,173:5,174:5,175:7,176:23,177:21,178:9,179:15,180:6,
+        181:8,182:7,183:3,184:7,185:5,186:5,187:10,188:3,189:10,190:3,
+        191:6,192:6,193:7,194:7,195:20,196:7,197:8,198:60,199:14,200:8,
+        201:83,202:76,203:7,204:2,205:2,206:5,207:7,208:5,209:3,210:3,
+        211:5,212:5,213:4,214:6,215:6,216:7,217:11,218:5,219:7,220:19,
+        221:26,222:16,223:12,224:14,225:3,226:4,227:9,228:5,229:3,230:8,
+        231:28,232:22,233:5,234:4,235:5,236:8,237:3,238:5,239:5,240:12,
+        241:9,242:16,243:13,244:8,245:7,246:26,247:5,248:4,249:5,250:3,
+        251:8,252:3,253:4,254:4,255:4,256:5,257:9,258:17,259:10,260:14,
+        261:9,262:3,263:7,264:6,265:6,266:6,267:10,268:5,269:5,270:3,
+        271:16,272:14,273:12,274:2,275:9,276:5,277:5,278:4,279:3,280:4,
+        281:4,282:5,283:5,284:5,285:4,286:5,287:3,288:4,289:5,290:6,
+        291:6,292:2,293:4,294:6,295:7,296:7,297:4,298:7,299:15,300:7,
+        301:4,302:3,303:6,304:8,305:3,306:4,307:6,308:6,309:7,310:10,
+        311:3,312:4,313:5,314:4,315:5,316:4,317:5,318:4,319:4,320:4,
+        321:5,322:6,323:4,324:6,325:6,326:4,327:5,328:3,329:3,330:4,
+        331:6,332:4,333:4,334:4,335:5,336:4,337:3,338:4,339:5,340:38,
+        341:5,342:4,343:5,344:9,345:9,346:9,347:6,348:3,349:5,350:4,
+        351:5,352:5,353:5,354:3,355:3,356:4,357:4,358:4,359:4,360:5,
+        361:5,362:4,363:5,364:3,365:4,366:5,367:4,368:4,369:4,370:4,
+        371:5,372:4,373:4,374:5,375:5,376:4,377:4,378:4,379:4,380:5,
+        381:5,382:4,383:6,384:4,385:4,386:4,387:5,388:4,389:5,390:4,
+        391:5,392:4,393:4,394:4,395:4,396:3,397:4,398:5,399:4,400:5,
+        401:4,402:4,403:5
+    };
+
+    // אבן העזר - 178 סימנים
+    const shulchanAruchEvenHaEzer = {
+        1:21,2:10,3:4,4:35,5:26,6:12,7:12,8:7,9:2,10:6,
+        11:10,12:4,13:17,14:17,15:32,16:9,17:63,18:12,19:14,20:8,
+        21:9,22:10,23:4,24:7,25:5,26:12,27:11,28:20,29:7,30:8,
+        31:11,32:5,33:10,34:12,35:9,36:7,37:34,38:38,39:6,40:10,
+        41:13,42:7,43:7,44:12,45:8,46:6,47:5,48:7,49:7,50:16,
+        51:6,52:9,53:5,54:10,55:8,56:7,57:5,58:5,59:5,60:10,
+        61:6,62:7,63:6,64:8,65:6,66:13,67:14,68:8,69:7,70:5,
+        71:11,72:12,73:4,74:11,75:12,76:17,77:9,78:9,79:8,80:19,
+        81:26,82:7,83:5,84:7,85:6,86:7,87:25,88:5,89:9,90:18,
+        91:10,92:7,93:4,94:5,95:12,96:8,97:6,98:4,99:6,100:7,
+        101:6,102:8,103:4,104:9,105:6,106:10,107:10,108:4,109:5,110:8,
+        111:15,112:10,113:12,114:10,115:9,116:6,117:9,118:9,119:8,120:5,
+        121:5,122:8,123:5,124:11,125:5,126:16,127:8,128:7,129:22,130:20,
+        131:9,132:7,133:7,134:10,135:7,136:10,137:10,138:9,139:7,140:6,
+        141:80,142:29,143:9,144:9,145:8,146:9,147:9,148:5,149:6,150:2,
+        151:4,152:8,153:28,154:5,155:15,156:6,157:7,158:5,159:8,160:4,
+        161:6,162:4,163:3,164:6,165:4,166:10,167:10,168:10,169:54,170:8,
+        171:19,172:15,173:13,174:10,175:7,176:30,177:5,178:17
+    };
+
+    // חושן משפט - 427 סימנים
+    const shulchanAruchChoshenMishpat = {
+        1:6,2:3,3:8,4:5,5:5,6:5,7:13,8:6,9:4,10:3,
+        11:6,12:4,13:8,14:5,15:2,16:8,17:11,18:6,19:4,20:4,
+        21:5,22:4,23:9,24:7,25:14,26:5,27:3,28:7,29:7,30:4,
+        31:4,32:3,33:4,34:26,35:5,36:5,37:22,38:5,39:12,40:18,
+        41:11,42:16,43:12,44:5,45:5,46:39,47:3,48:5,49:4,50:5,
+        51:3,52:4,53:25,54:7,55:6,56:6,57:5,58:7,59:7,60:6,
+        61:6,62:9,63:10,64:8,65:7,66:40,67:4,68:7,69:10,70:6,
+        71:24,72:27,73:16,74:20,75:26,76:14,77:5,78:8,79:18,80:5,
+        81:4,82:11,83:10,84:11,85:4,86:3,87:19,88:8,89:24,90:7,
+        91:5,92:21,93:6,94:7,95:4,96:5,97:5,98:4,99:4,100:5,
+        101:5,102:3,103:5,104:5,105:8,106:5,107:5,108:5,109:7,110:9,
+        111:7,112:12,113:10,114:7,115:7,116:8,117:17,118:5,119:6,120:9,
+        121:10,122:9,123:9,124:14,125:12,126:24,127:4,128:10,129:7,130:5,
+        131:18,132:5,133:7,134:4,135:5,136:5,137:4,138:4,139:5,140:4,
+        141:9,142:3,143:6,144:5,145:24,146:4,147:8,148:11,149:6,150:6,
+        151:7,152:6,153:6,154:2,155:43,156:10,157:5,158:11,159:9,160:24,
+        161:7,162:4,163:3,164:4,165:4,166:4,167:4,168:5,169:23,170:5,
+        171:25,172:4,173:7,174:7,175:55,176:44,177:13,178:5,179:5,180:6,
+        181:4,182:10,183:4,184:9,185:7,186:7,187:6,188:9,189:7,190:3,
+        191:6,192:6,193:12,194:7,195:14,196:12,197:8,198:7,199:8,200:8,
+        201:4,202:5,203:8,204:9,205:6,206:7,207:6,208:8,209:8,210:6,
+        211:4,212:5,213:6,214:9,215:7,216:8,217:8,218:6,219:7,220:18,
+        221:6,222:7,223:11,224:8,225:7,226:6,227:7,228:10,229:7,230:4,
+        231:29,232:21,233:11,234:5,235:24,236:7,237:9,238:7,239:7,240:10,
+        241:6,242:10,243:8,244:6,245:12,246:5,247:5,248:5,249:9,250:11,
+        251:5,252:6,253:6,254:9,255:8,256:8,257:6,258:6,259:7,260:7,
+        261:7,262:5,263:6,264:7,265:7,266:8,267:8,268:7,269:9,270:6,
+        271:9,272:9,273:8,274:7,275:7,276:4,277:8,278:5,279:7,280:4,
+        281:4,282:5,283:5,284:5,285:4,286:5,287:3,288:4,289:5,290:6,
+        291:6,292:6,293:4,294:6,295:7,296:7,297:4,298:7,299:5,300:7,
+        301:8,302:7,303:4,304:9,305:11,306:10,307:9,308:7,309:8,310:6,
+        311:8,312:10,313:4,314:5,315:4,316:5,317:4,318:5,319:4,320:5,
+        321:5,322:4,323:6,324:5,325:7,326:4,327:6,328:4,329:4,330:5,
+        331:7,332:5,333:6,334:5,335:5,336:5,337:6,338:4,339:4,340:10,
+        341:4,342:5,343:4,344:5,345:4,346:4,347:7,348:4,349:6,350:6,
+        351:4,352:4,353:5,354:4,355:4,356:5,357:5,358:4,359:4,360:4,
+        361:4,362:4,363:5,364:4,365:4,366:6,367:7,368:6,369:5,370:5,
+        371:4,372:4,373:5,374:5,375:4,376:4,377:4,378:4,379:4,380:6,
+        381:4,382:4,383:5,384:5,385:4,386:4,387:4,388:5,389:4,390:5,
+        391:5,392:5,393:4,394:4,395:5,396:3,397:4,398:4,399:5,400:5,
+        401:5,402:6,403:5,404:5,405:4,406:4,407:5,408:4,409:4,410:4,
+        411:4,412:5,413:4,414:4,415:5,416:4,417:5,418:4,419:5,420:5,
+        421:6,422:4,423:5,424:5,425:4,426:5,427:4
+    };
+
+    const shulchanAruchData = {
+        "אורח חיים":   { totalSimanim: 697, simanim: shulchanAruchOrachChayim },
+        "יורה דעה":    { totalSimanim: 403, simanim: shulchanAruchYoreDea },
+        "אבן העזר":    { totalSimanim: 178, simanim: shulchanAruchEvenHaEzer },
+        "חושן משפט":   { totalSimanim: 427, simanim: shulchanAruchChoshenMishpat }
+    };
+    // מחיקת avgSeifimPerSiman - כעת משתמשים בנתונים אמיתיים
+
+    // =============================
+    //  נתוני משנה ברורה - 6 חלקים על אורח חיים
+    //  חלוקה לפי סימני אורח חיים (סה"כ 697 סימנים)
+    // =============================
+    const mishnaBruraData = {
+        "חלק א": { startSiman: 1,   endSiman: 127 },
+        "חלק ב": { startSiman: 128, endSiman: 241 },
+        "חלק ג": { startSiman: 242, endSiman: 365 },
+        "חלק ד": { startSiman: 366, endSiman: 428 },
+        "חלק ה": { startSiman: 429, endSiman: 494 },
+        "חלק ו": { startSiman: 495, endSiman: 697 }
+    };
+
+    // =============================
+    //  נתוני תניא - 5 חלקים ופרקים
+    // =============================
+    const tanyaData = {
+        "ליקוטי אמרים": 53,
+        "שער היחוד והאמונה": 12,
+        "אגרת התשובה": 12,
+        "אגרת הקודש": 32,
+        "קונטרס אחרון": 10
+    };
+
+    // =============================
+    //  נתוני מסילת ישרים - 26 פרקים
+    // =============================
+    const mesilatYesharimData = { totalChapters: 26 };
+
+    // =============================
+    //  נתוני חובת הלבבות - 10 שערים
+    // =============================
+    const chovatHaLevavotData = {
+        "שער היחוד": 8,
+        "שער הבחינה": 10,
+        "שער עבודת הלבבות": 10,
+        "שער הביטחון": 10,
+        "שער הייחוד": 10,
+        "שער הכניעה": 8,
+        "שער התשובה": 10,
+        "שער החשבון": 10,
+        "שער הפרישות": 10,
+        "שער אהבת ה'": 10
+    };
+
+    // =============================
+    //  נתוני כוזרי - 5 מאמרים וסעיפים
+    // =============================
+    const kuzariData = {
+        "מאמר א": 115,
+        "מאמר ב": 80,
+        "מאמר ג": 73,
+        "מאמר ד": 31,
+        "מאמר ה": 29
+    };
+
+    // =============================
+    //  נתוני ספר העיקרים - 4 מאמרים ופרקים
+    // =============================
+    const seferHaIkarimData = {
+        "מאמר א": 26,
+        "מאמר ב": 30,
+        "מאמר ג": 35,
+        "מאמר ד": 51
+    };
+
+
+    // =============================
+    //  נתוני הקדמות הרמב"ם למשנה
+    //  הקדמה למשנה (7 פסקאות), פרק חלק (8 פסקאות), הקדמה לאבות (8 פסקאות)
+    // =============================
+    const rambamIntroData = {
+        "הקדמה למשנה":   7,
+        "פרק חלק":       8,
+        "הקדמה לאבות":   8
+    };
+
+    // =============================
+    //  ניהול מצב
+    // =============================
+    let studies = JSON.parse(localStorage.getItem('studies')) || [];
+    let trackingData = JSON.parse(localStorage.getItem('trackingData')) || {};
+    let lastPosition = JSON.parse(localStorage.getItem('lastPosition')) || {};
+    let currentTrackStudyId = null;
+    let currentTrackDate = null;
+    let currentMasechet = null;
+    let currentPerek = null;
+    let _pendingDeleteStudyId = null;
+    let _pendingDeleteDisplayName = null;
+
+    // שמירת מיקום אחרון לאחר בחירה
+    function saveLastPosition(studyId, masechet, perek) {
+        if (!lastPosition[studyId]) lastPosition[studyId] = {};
+        if (masechet !== undefined) lastPosition[studyId].masechet = masechet;
+        if (perek !== undefined) lastPosition[studyId].perek = perek;
+        localStorage.setItem("lastPosition", JSON.stringify(lastPosition));
+    }
+
+    // קבלת כל הפריטים שנלמדו אי פעם עבור לימוד (מכל התאריכים)
+    function getAllLearnedItems(studyId) {
+        const data = trackingData[studyId] || {};
+        const learned = new Set();
+        Object.values(data).forEach(items => items.forEach(i => learned.add(i)));
+        return learned;
+    }
+
+    // =============================
+    //  אינדיקטור אופליין קבוע
+    // =============================
+    let _isOnline = navigator.onLine;
+
+    function updateOfflineBanner() {
+        _isOnline = navigator.onLine;
+        const banner = document.getElementById('offlineBanner');
+        if (!_isOnline) {
+            banner.classList.add('show');
+        } else {
+            banner.classList.remove('show');
+            // כשחוזר חיבור — נסה לסנכרן
+            flushPendingSync();
+        }
+    }
+
+    function updatePendingDot() {
+        const hasPending = localStorage.getItem('pendingSync') === 'true';
+        const dot = document.getElementById('pendingDot');
+        if (hasPending && !_isOnline) {
+            dot.classList.add('show');
+            document.getElementById('offlineText').textContent = 'אין חיבור — שינויים ממתינים';
+        } else {
+            dot.classList.remove('show');
+            document.getElementById('offlineText').textContent = 'אין חיבור לרשת';
+        }
+    }
+
+    window.addEventListener('online',  updateOfflineBanner);
+    window.addEventListener('offline', updateOfflineBanner);
+
+    // =============================================
+    // 🔧 הגדרות Firebase — שנה לפרויקט שלך!
+    // =============================================
+    const FIREBASE_CONFIG = {
+        apiKey: "AIzaSyCy8NmaBexusj0cUw4Bz4K5FMLt6dLVe7k",
+        authDomain: "limudtracker.firebaseapp.com",
+        projectId: "limudtracker",
+        storageBucket: "limudtracker.firebasestorage.app",
+        messagingSenderId: "9462596582",
+        appId: "1:9462596582:web:3bfc2dbe5de9dded7c0c27"
+    };
+    const USER_ID = 'default_user';
+
+    // =============================
+    //  אינדיקטור סנכרון זמני
+    // =============================
+    function showSync(text, icon) {
+        const ind = document.getElementById('syncIndicator');
+        document.getElementById('syncText').textContent = text;
+        document.getElementById('syncIcon').textContent = icon;
+        ind.style.display = 'flex';
+    }
+    function hideSync() {
+        setTimeout(() => { document.getElementById('syncIndicator').style.display = 'none'; }, 2000);
+    }
+
+    // =============================
+    //  Firebase — טעינה דינמית
+    // =============================
+    let _fbSave = null, _fbLoad = null;
+
+    async function initFirebase() {
+        if (FIREBASE_CONFIG.apiKey === 'YOUR_API_KEY') return;
+        try {
+            const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
+            const { getFirestore, doc, setDoc, getDoc, enableIndexedDbPersistence }
+                = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+
+            const app = initializeApp(FIREBASE_CONFIG);
+            const db = getFirestore(app);
+            enableIndexedDbPersistence(db).catch(() => {});
+
+            _fbSave = async (s, t) => {
+                await setDoc(doc(db, 'users', USER_ID), { studies: s });
+                await setDoc(doc(db, 'users', USER_ID, 'tracking', 'data'), { tracking: t });
+            };
+            _fbLoad = async () => {
+                const uDoc = await getDoc(doc(db, 'users', USER_ID));
+                const tDoc = await getDoc(doc(db, 'users', USER_ID, 'tracking', 'data'));
+                return {
+                    studies:  uDoc.exists()  ? (uDoc.data().studies   || []) : null,
+                    tracking: tDoc.exists()  ? (tDoc.data().tracking  || {}) : null
+                };
+            };
+        } catch(e) {
+            console.warn('Firebase init failed:', e);
+        }
+    }
+
+    // =============================
+    //  ניסיון לסנכרן שינויים ממתינים
+    // =============================
+    async function flushPendingSync() {
+        if (!_fbSave) return;
+        if (localStorage.getItem('pendingSync') !== 'true') return;
+        try {
+            showSync('מסנכרן שינויים...', '☁');
+            await _fbSave(studies, trackingData);
+            localStorage.removeItem('pendingSync');
+            updatePendingDot();
+            showSync('סונכרן בהצלחה ✓', '✅');
+            hideSync();
+        } catch(e) {
+            // עדיין לא מצליח — נשאר ממתין
+        }
+    }
+
+    // =============================
+    //  שמירה
+    // =============================
+    async function saveData() {
+        // תמיד שמור מקומית קודם
+        localStorage.setItem('studies', JSON.stringify(studies));
+        localStorage.setItem('trackingData', JSON.stringify(trackingData));
+
+        if (!_fbSave) return;
+
+        if (!navigator.onLine) {
+            // אין חיבור — סמן שיש שינויים ממתינים
+            localStorage.setItem('pendingSync', 'true');
+            updatePendingDot();
+            showSync('נשמר מקומית (אופליין)', '📴');
+            hideSync();
+            return;
+        }
+
+        showSync('מסנכרן...', '☁');
+        try {
+            await _fbSave(studies, trackingData);
+            localStorage.removeItem('pendingSync');
+            updatePendingDot();
+            showSync('נשמר בענן ✓', '✅');
+        } catch(e) {
+            localStorage.setItem('pendingSync', 'true');
+            updatePendingDot();
+            showSync('נשמר מקומית (אופליין)', '📴');
+        }
+        hideSync();
+    }
+
+    // =============================
+    //  אתחול
+    // =============================
+    const dates = [];
+
+    async function init() {
+        // עדכן אינדיקטור מצב חיבור מיד
+        updateOfflineBanner();
+        updatePendingDot();
+
+        await initFirebase();
+
+        if (_fbLoad && navigator.onLine) {
+            showSync('טוען נתונים...', '☁');
+            try {
+                const { studies: fbS, tracking: fbT } = await _fbLoad();
+                if (fbS !== null) { studies = fbS; localStorage.setItem('studies', JSON.stringify(studies)); }
+                if (fbT !== null) { trackingData = fbT; localStorage.setItem('trackingData', JSON.stringify(trackingData)); }
+                // אם טענו מענן בהצלחה — אין יותר pending
+                localStorage.removeItem('pendingSync');
+                updatePendingDot();
+                showSync('נטען מהענן ✓', '✅');
+            } catch(e) {
+                showSync('טוען מקומית', '📱');
+            }
+            hideSync();
+        } else if (_fbLoad && !navigator.onLine) {
+            // אופליין — השתמש בנתונים המקומיים כפי שהם
+            showSync('טוען מקומי (אופליין)', '📴');
+            hideSync();
+        }
+
+        // אחרי טעינה — נסה לסנכרן pending אם יש חיבור
+        if (navigator.onLine) await flushPendingSync();
+
+        const today = new Date();
+        for (let i = 3; i >= 0; i--) {
+            const d = new Date(today);
+            d.setDate(today.getDate() - i);
+            dates.push(d);
+        }
+        renderTable();
+    }
+
+    // =============================
+    //  רינדור טבלה
+    // =============================
+    function renderTable() {
+        const headerRow = document.getElementById('daysHeader');
+        headerRow.innerHTML = '<th></th>';
+        const daysNames = ["יום א'","יום ב'","יום ג'","יום ד'","יום ה'","יום ו'","שבת"];
+        dates.forEach(date => {
+            const dayName = daysNames[date.getDay()];
+            const dayNum = date.getDate();
+            headerRow.innerHTML += `<th>${dayName}<br>${dayNum}</th>`;
+        });
+
+        const tbody = document.getElementById('studiesBody');
+        tbody.innerHTML = '';
+
+        studies.forEach(study => {
+            const tr = document.createElement('tr');
+            let displayName = study.name;
+            if (!displayName) {
+                const typeNames = {
+                    'bavli': 'תלמוד בבלי',
+                    'mishna': 'משנה',
+                    'torah': 'תורה',
+                    'nach': 'נ"ך',
+                    'rambam': 'משנה תורה לרמב"ם',
+                    'shulchanAruch': 'שולחן ערוך',
+                    'mishnaBrura': 'משנה ברורה',
+                    'tanya': 'תניא',
+                    'mesilatYesharim': 'מסילת ישרים',
+                    'chovatHaLevavot': 'חובת הלבבות',
+                    'kuzari': 'כוזרי',
+                    'seferHaIkarim': 'ספר העיקרים',
+                    'rambamIntro': 'הקדמות הרמב"ם למשנה'
+                };
+                displayName = typeNames[study.type] || 'לימוד';
+            }
+            tr.innerHTML = `<td class="study-name" style="cursor:pointer;" onclick="openStatsModal('${study.id}')">${displayName}</td>`;
+            dates.forEach(date => {
+                const dateStr = date.toISOString().split('T')[0];
+                const dailyTrack = (trackingData[study.id] && trackingData[study.id][dateStr]) || [];
+                const count = dailyTrack.length;
+                let statusClass = '';
+                if (count === 0) statusClass = 'none';
+                else if (count >= study.goalAmount) statusClass = 'complete';
+                else statusClass = 'partial';
+                const unitLabels = {
+                    'pages': 'דפים',
+                    'mishnayot': 'משניות',
+                    'chapters': 'פרקים',
+                    'aliyot': 'עליות',
+                    'parshiyot': 'פרשיות',
+                    'halachot': 'הלכות',
+                    'seifim': 'סעיפים',
+                    'simanim': 'סימנים',
+                    'paragraphs': 'פסקאות'
+                };
+                const unitLabel = unitLabels[study.goalUnit] || 'יחידות';
+                tr.innerHTML += `
+                    <td class="day-cell" onclick="openTrackModal('${study.id}', '${dateStr}')">
+                        <div class="status-circle ${statusClass}"></div>
+                        <span class="status-text">${count}/${study.goalAmount} ${unitLabel}</span>
+                    </td>
+                `;
+            });
+            tbody.appendChild(tr);
+        });
+    }
+
+    // =============================
+    //  הוספת לימוד
+    // =============================
+    function openAddModal() {
+        document.getElementById('addModal').style.display = 'flex';
+        updateGoalUnits();
+    }
+
+    function updateGoalUnits() {
+        const type = document.getElementById('studyType').value;
+        const unitSelect = document.getElementById('goalUnit');
+        unitSelect.innerHTML = '';
+
+        if (type === 'bavli') {
+            unitSelect.innerHTML = '<option value="pages">דפים</option>';
+        } else if (type === 'mishna') {
+            unitSelect.innerHTML = `
+                <option value="mishnayot">משניות</option>
+                <option value="chapters">פרקים</option>
+            `;
+        } else if (type === 'torah') {
+            unitSelect.innerHTML = `
+                <option value="aliyot">עליות</option>
+                <option value="parshiyot">פרשיות</option>
+            `;
+        } else if (type === 'nach') {
+            unitSelect.innerHTML = `
+                <option value="chapters">פרקים</option>
+            `;
+        } else if (type === 'rambam') {
+            unitSelect.innerHTML = `
+                <option value="chapters">פרקים</option>
+            `;
+        } else if (type === 'shulchanAruch') {
+            unitSelect.innerHTML = `
+                <option value="seifim">סעיפים</option>
+                <option value="simanim">סימנים</option>
+            `;
+        } else if (type === 'mishnaBrura') {
+            unitSelect.innerHTML = `
+                <option value="simanim">סימנים</option>
+            `;
+        } else if (type === 'tanya') {
+            unitSelect.innerHTML = `
+                <option value="chapters">פרקים</option>
+            `;
+        } else if (type === 'mesilatYesharim') {
+            unitSelect.innerHTML = `
+                <option value="chapters">פרקים</option>
+            `;
+        } else if (type === 'chovatHaLevavot') {
+            unitSelect.innerHTML = `
+                <option value="chapters">שערים</option>
+            `;
+        } else if (type === 'kuzari') {
+            unitSelect.innerHTML = `
+                <option value="seifim">סעיפים</option>
+            `;
+        } else if (type === 'seferHaIkarim') {
+            unitSelect.innerHTML = `
+                <option value="chapters">פרקים</option>
+            `;
+        } else if (type === 'rambamIntro') {
+            unitSelect.innerHTML = `
+                <option value="paragraphs">פסקאות</option>
+            `;
+        }
+    }
+
+    async function saveStudy() {
+        const type = document.getElementById('studyType').value;
+        const name = document.getElementById('studyName').value;
+        const amount = parseInt(document.getElementById('goalAmount').value);
+        const unit = document.getElementById('goalUnit').value;
+        const newStudy = {
+            id: Date.now().toString(),
+            type,
+            name,
+            goalAmount: amount,
+            goalUnit: unit
+        };
+        studies.push(newStudy);
+        await saveData();
+        closeModals();
+        renderTable();
+    }
+
+    // =============================
+    //  פתיחת מודל דיווח
+    // =============================
+    function openTrackModal(studyId, dateStr) {
+        currentTrackStudyId = studyId;
+        currentTrackDate = dateStr;
+        currentMasechet = null;
+        currentPerek = null;
+
+        const study = studies.find(s => s.id === studyId);
+        const displayName = study.name || getStudyTypeName(study.type);
+        document.getElementById('trackModalTitle').innerText = `דיווח עבור ${displayName}`;
+
+        // הסתר כל הסקשנים
+        document.getElementById('stepMasechet').style.display = 'none';
+        document.getElementById('stepPerekPick').style.display = 'none';
+        document.getElementById('gridSection').style.display = 'none';
+        document.getElementById('dividerAfterMasechet').style.display = 'none';
+        document.getElementById('dividerAfterPerek').style.display = 'none';
+
+        // אתחול לפי סוג לימוד
+        const grid = document.getElementById('masechetGrid');
+        grid.innerHTML = '';
+
+        if (study.type === 'bavli') {
+            document.getElementById('step1Label').textContent = 'בחר מסכת:';
+            masechtotBavliList.forEach(m => {
+                const btn = document.createElement('button');
+                btn.className = 'masechet-btn';
+                btn.textContent = m;
+                btn.onclick = () => selectMasechetBavli(m);
+                grid.appendChild(btn);
+            });
+            document.getElementById('stepMasechet').style.display = 'block';
+        } else if (study.type === 'mishna') {
+            document.getElementById('step1Label').textContent = 'בחר מסכת:';
+            masechtotMishnaList.forEach(m => {
+                const btn = document.createElement('button');
+                btn.className = 'masechet-btn';
+                btn.textContent = m;
+                btn.onclick = () => selectMasechetMishna(m);
+                grid.appendChild(btn);
+            });
+            document.getElementById('stepMasechet').style.display = 'block';
+        } else if (study.type === 'torah') {
+            document.getElementById('step1Label').textContent = 'בחר פרשה:';
+            torahParshiyot.forEach(p => {
+                const btn = document.createElement('button');
+                btn.className = 'masechet-btn';
+                btn.textContent = p;
+                btn.onclick = () => selectTorahParsha(p);
+                grid.appendChild(btn);
+            });
+            document.getElementById('stepMasechet').style.display = 'block';
+        } else if (study.type === 'nach') {
+            document.getElementById('step1Label').textContent = 'בחר ספר:';
+            const allBooks = [...Object.keys(neviimData), ...Object.keys(ketuvimData)];
+            allBooks.forEach(book => {
+                const btn = document.createElement('button');
+                btn.className = 'masechet-btn';
+                btn.textContent = book;
+                btn.onclick = () => selectNachBook(book);
+                grid.appendChild(btn);
+            });
+            document.getElementById('stepMasechet').style.display = 'block';
+        } else if (study.type === 'rambam') {
+            document.getElementById('step1Label').textContent = 'בחר ספר:';
+            Object.keys(rambamData).forEach(sefer => {
+                const btn = document.createElement('button');
+                btn.className = 'masechet-btn';
+                btn.textContent = sefer;
+                btn.onclick = () => selectRambamSefer(sefer);
+                grid.appendChild(btn);
+            });
+            document.getElementById('stepMasechet').style.display = 'block';
+        } else if (study.type === 'shulchanAruch') {
+            document.getElementById('step1Label').textContent = 'בחר חלק:';
+            Object.keys(shulchanAruchData).forEach(part => {
+                const btn = document.createElement('button');
+                btn.className = 'masechet-btn';
+                btn.textContent = part;
+                btn.onclick = () => selectShulchanAruchPart(part);
+                grid.appendChild(btn);
+            });
+            document.getElementById('stepMasechet').style.display = 'block';
+        } else if (study.type === 'mishnaBrura') {
+            document.getElementById('step1Label').textContent = 'בחר חלק:';
+            Object.keys(mishnaBruraData).forEach(part => {
+                const btn = document.createElement('button');
+                btn.className = 'masechet-btn';
+                btn.textContent = part;
+                btn.onclick = () => selectMishnaBruraPart(part);
+                grid.appendChild(btn);
+            });
+            document.getElementById('stepMasechet').style.display = 'block';
+        } else if (study.type === 'tanya') {
+            document.getElementById('step1Label').textContent = 'בחר חלק:';
+            Object.keys(tanyaData).forEach(part => {
+                const btn = document.createElement('button');
+                btn.className = 'masechet-btn';
+                btn.textContent = part;
+                btn.onclick = () => selectTanyaPart(part);
+                grid.appendChild(btn);
+            });
+            document.getElementById('stepMasechet').style.display = 'block';
+        } else if (study.type === 'mesilatYesharim') {
+            showMesilatYesharimGrid();
+        } else if (study.type === 'chovatHaLevavot') {
+            document.getElementById('step1Label').textContent = 'בחר שער:';
+            Object.keys(chovatHaLevavotData).forEach(shaar => {
+                const btn = document.createElement('button');
+                btn.className = 'masechet-btn';
+                btn.textContent = shaar;
+                btn.onclick = () => selectChovatHaLevavotShaar(shaar);
+                grid.appendChild(btn);
+            });
+            document.getElementById('stepMasechet').style.display = 'block';
+        } else if (study.type === 'kuzari') {
+            document.getElementById('step1Label').textContent = 'בחר מאמר:';
+            Object.keys(kuzariData).forEach(maamar => {
+                const btn = document.createElement('button');
+                btn.className = 'masechet-btn';
+                btn.textContent = maamar;
+                btn.onclick = () => selectKuzariMaamar(maamar);
+                grid.appendChild(btn);
+            });
+            document.getElementById('stepMasechet').style.display = 'block';
+        } else if (study.type === 'seferHaIkarim') {
+            document.getElementById('step1Label').textContent = 'בחר מאמר:';
+            Object.keys(seferHaIkarimData).forEach(maamar => {
+                const btn = document.createElement('button');
+                btn.className = 'masechet-btn';
+                btn.textContent = maamar;
+                btn.onclick = () => selectSeferHaIkarimMaamar(maamar);
+                grid.appendChild(btn);
+            });
+            document.getElementById('stepMasechet').style.display = 'block';
+        } else if (study.type === 'rambamIntro') {
+            document.getElementById('step1Label').textContent = 'בחר חלק:';
+            Object.keys(rambamIntroData).forEach(part => {
+                const btn = document.createElement('button');
+                btn.className = 'masechet-btn';
+                btn.textContent = part;
+                btn.onclick = () => selectRambamIntroPart(part);
+                grid.appendChild(btn);
+            });
+            document.getElementById('stepMasechet').style.display = 'block';
+        }
+
+        // שחזור מיקום אחרון
+        const lastPos = lastPosition[studyId];
+        renderTrackedItems();
+        document.getElementById('trackModal').style.display = 'flex';
+        if (lastPos && lastPos.masechet) {
+            // שחזור מיקום אחרון — לחץ אוטומטי על הכפתור האחרון
+            setTimeout(() => {
+                const grid = document.getElementById('masechetGrid');
+                const btns = grid ? grid.querySelectorAll('.masechet-btn') : [];
+                for (const btn of btns) {
+                    const spanEl = btn.querySelector('span');
+                    const btnText = spanEl ? spanEl.textContent.trim() : btn.textContent.trim();
+                    if (btnText === lastPos.masechet) {
+                        btn.click();
+                        btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        // אם יש גם פרק שמור (משנה) — שחזר גם אותו
+                        if (lastPos.perek) {
+                            setTimeout(() => {
+                                const perekGrid = document.getElementById('perekPickGrid');
+                                const perekBtns = perekGrid ? perekGrid.querySelectorAll('.perek-btn') : [];
+                                if (perekBtns[lastPos.perek - 1]) {
+                                    perekBtns[lastPos.perek - 1].click();
+                                    perekBtns[lastPos.perek - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }
+                            }, 120);
+                        }
+                        break;
+                    }
+                }
+            }, 80);
+        }
+    }
+
+    function getStudyTypeName(type) {
+        const names = {
+            'bavli': 'תלמוד בבלי',
+            'mishna': 'משנה',
+            'torah': 'תורה',
+            'nach': 'נ"ך',
+            'rambam': 'משנה תורה לרמב"ם',
+            'shulchanAruch': 'שולחן ערוך',
+            'mishnaBrura': 'משנה ברורה',
+            'tanya': 'תניא',
+            'mesilatYesharim': 'מסילת ישרים',
+            'chovatHaLevavot': 'חובת הלבבות',
+            'kuzari': 'כוזרי',
+            'seferHaIkarim': 'ספר העיקרים',
+            'rambamIntro': 'הקדמות הרמב"ם למשנה'
+        };
+        return names[type] || 'לימוד';
+    }
+
+    // =============================
+    //  בחירת מסכת - תלמוד בבלי
+    // =============================
+    function selectMasechetBavli(masechet) {
+        currentMasechet = masechet;
+        saveLastPosition(currentTrackStudyId, masechet);
+        document.querySelectorAll('.masechet-btn').forEach(btn => {
+            btn.classList.toggle('selected', btn.textContent === masechet);
+        });
+        document.getElementById('dividerAfterMasechet').style.display = 'block';
+        showBavliDafGrid(masechet);
+    }
+
+    // =============================
+    //  בחירת מסכת - משנה
+    // =============================
+    function selectMasechetMishna(masechet) {
+        currentMasechet = masechet;
+        saveLastPosition(currentTrackStudyId, masechet);
+        const study = studies.find(s => s.id === currentTrackStudyId);
+        document.querySelectorAll('.masechet-btn').forEach(btn => {
+            btn.classList.toggle('selected', btn.textContent === masechet);
+        });
+        document.getElementById('dividerAfterMasechet').style.display = 'block';
+
+        if (study.goalUnit === 'chapters') {
+            showMishnaChaptersGrid(masechet);
+        } else {
+            showMishnaPerekPick(masechet);
+        }
+    }
+
+    // =============================
+    //  בחירת פרשה - תורה
+    // =============================
+    function selectTorahParsha(parsha) {
+        currentMasechet = parsha;
+        const study = studies.find(s => s.id === currentTrackStudyId);
+        document.querySelectorAll('.masechet-btn').forEach(btn => {
+            btn.classList.toggle('selected', btn.textContent === parsha);
+        });
+
+        if (study.goalUnit === 'aliyot') {
+            showTorahAliyotGrid(parsha);
+        } else {
+            // פרשיות - כל פרשה היא יחידה אחת
+            showSimpleUnitGrid('פרשה', parsha, 1, 'aliyah');
+        }
+    }
+
+    // =============================
+    //  בחירת ספר - נ"ך
+    // =============================
+    function selectNachBook(book) {
+        currentMasechet = book;
+        saveLastPosition(currentTrackStudyId, book);
+        document.querySelectorAll('.masechet-btn').forEach(btn => {
+            btn.classList.toggle('selected', btn.textContent === book);
+        });
+        document.getElementById('dividerAfterMasechet').style.display = 'block';
+        showNachChaptersGrid(book);
+    }
+
+    function showNachChaptersGrid(book) {
+        const bookData = neviimData[book] || ketuvimData[book];
+        if (!bookData) return;
+
+        document.getElementById('gridLabel').textContent = `${book} — בחר פרקים:`;
+        const grid = document.getElementById('mainGrid');
+        grid.innerHTML = '';
+
+        const items = (trackingData[currentTrackStudyId] && trackingData[currentTrackStudyId][currentTrackDate]) || [];
+        const allLearned = getAllLearnedItems(currentTrackStudyId);
+
+        for (let chapter = 1; chapter <= bookData; chapter++) {
+            const label = numToHebrew(chapter);
+            const itemStr = `${book} פרק ${label}`;
+            const cell = document.createElement('div');
+            const isToday = items.includes(itemStr);
+            const wasLearned = !isToday && allLearned.has(itemStr);
+            cell.className = 'tracker-cell' + (isToday ? ' selected' : wasLearned ? ' already-learned' : '');
+            cell.textContent = label;
+            cell.title = wasLearned ? `פרק ${label} — כבר נלמד` : `פרק ${label}`;
+            if (!wasLearned) cell.onclick = () => toggleItem(itemStr, cell);
+            grid.appendChild(cell);
+        }
+
+        document.getElementById('gridSection').style.display = 'block';
+        document.getElementById('stepPerekPick').style.display = 'none';
+        document.getElementById('dividerAfterPerek').style.display = 'none';
+    }
+
+    // =============================
+    //  בחירת ספר - רמב"ם
+    // =============================
+    function selectRambamSefer(sefer) {
+        currentMasechet = sefer;
+        saveLastPosition(currentTrackStudyId, sefer);
+        const study = studies.find(s => s.id === currentTrackStudyId);
+        document.querySelectorAll('.masechet-btn').forEach(btn => {
+            btn.classList.toggle('selected', btn.textContent === sefer);
+        });
+        document.getElementById('dividerAfterMasechet').style.display = 'block';
+        document.getElementById('step2Label').textContent = `בחר הלכות ב${sefer}:`;
+
+        const halachot = rambamData[sefer];
+        const grid = document.getElementById('perekPickGrid');
+        grid.innerHTML = '';
+
+        Object.keys(halachot).forEach(halacha => {
+            const btn = document.createElement('button');
+            btn.className = 'perek-btn';
+            btn.textContent = halacha;
+            btn.onclick = () => selectRambamHalacha(sefer, halacha, btn);
+            grid.appendChild(btn);
+        });
+
+        document.getElementById('stepPerekPick').style.display = 'block';
+    }
+
+    function selectRambamHalacha(sefer, halacha, btnEl) {
+        document.querySelectorAll('#perekPickGrid .perek-btn').forEach(b => b.classList.remove('selected'));
+        btnEl.classList.add('selected');
+        const study = studies.find(s => s.id === currentTrackStudyId);
+        const totalPrakim = rambamData[sefer][halacha];
+
+        if (study.goalUnit === 'chapters') {
+            // הצג פרקים להלכה זו
+            showRambamChaptersGrid(sefer, halacha, totalPrakim);
+        } else {
+            // הלכות - כל הלכה היא יחידה
+            const itemStr = `${sefer} ${halacha}`;
+            toggleItem(itemStr, btnEl);
+        }
+    }
+
+    function showRambamChaptersGrid(sefer, halacha, totalPrakim) {
+        saveLastPosition(currentTrackStudyId, sefer);
+        document.getElementById('dividerAfterPerek').style.display = 'block';
+        document.getElementById('gridLabel').textContent = `${sefer} ${halacha} - בחר פרקים:`;
+        const grid = document.getElementById('mainGrid');
+        grid.innerHTML = '';
+
+        const items = (trackingData[currentTrackStudyId] && trackingData[currentTrackStudyId][currentTrackDate]) || [];
+        const allLearned = getAllLearnedItems(currentTrackStudyId);
+
+        for (let chapter = 1; chapter <= totalPrakim; chapter++) {
+            const label = numToHebrew(chapter);
+            const itemStr = `${sefer} ${halacha} פרק ${label}`;
+            const cell = document.createElement('div');
+            const isToday = items.includes(itemStr);
+            const wasLearned = !isToday && allLearned.has(itemStr);
+            cell.className = 'tracker-cell' + (isToday ? ' selected' : wasLearned ? ' already-learned' : '');
+            cell.textContent = label;
+            cell.title = wasLearned ? `פרק ${label} — כבר נלמד` : `פרק ${label}`;
+            if (!wasLearned) cell.onclick = () => toggleItem(itemStr, cell);
+            grid.appendChild(cell);
+        }
+
+        document.getElementById('gridSection').style.display = 'block';
+    }
+
+    // =============================
+    //  בחירת חלק - שולחן ערוך
+    // =============================
+    function selectShulchanAruchPart(part) {
+        currentMasechet = part;
+        saveLastPosition(currentTrackStudyId, part);
+        const study = studies.find(s => s.id === currentTrackStudyId);
+        document.querySelectorAll('.masechet-btn').forEach(btn => {
+            btn.classList.toggle('selected', btn.textContent === part);
+        });
+        document.getElementById('dividerAfterMasechet').style.display = 'block';
+
+        const totalSimanim = shulchanAruchData[part].totalSimanim;
+
+        if (study.goalUnit === 'simanim') {
+            showShulchanAruchSimanimGrid(part, totalSimanim);
+        } else {
+            // סעיפים - קודם בחירת סימן
+            document.getElementById('step2Label').textContent = `בחר סימן ב${part}:`;
+            const grid = document.getElementById('perekPickGrid');
+            grid.innerHTML = '';
+
+            for (let siman = 1; siman <= totalSimanim; siman++) {
+                const btn = document.createElement('button');
+                btn.className = 'perek-btn';
+                btn.textContent = `סימן ${siman}`;
+                btn.onclick = () => selectShulchanAruchSiman(part, siman, btn);
+                grid.appendChild(btn);
+            }
+
+            document.getElementById('stepPerekPick').style.display = 'block';
+        }
+    }
+
+    function showShulchanAruchSimanimGrid(part, totalSimanim) {
+        saveLastPosition(currentTrackStudyId, part);
+        document.getElementById('gridLabel').textContent = `${part} - בחר סימנים:`;
+        const grid = document.getElementById('mainGrid');
+        grid.innerHTML = '';
+
+        const items = (trackingData[currentTrackStudyId] && trackingData[currentTrackStudyId][currentTrackDate]) || [];
+        const allLearned = getAllLearnedItems(currentTrackStudyId);
+
+        for (let siman = 1; siman <= totalSimanim; siman++) {
+            const itemStr = `${part} סימן ${siman}`;
+            const cell = document.createElement('div');
+            const isToday = items.includes(itemStr);
+            const wasLearned = !isToday && allLearned.has(itemStr);
+            cell.className = 'tracker-cell' + (isToday ? ' selected' : wasLearned ? ' already-learned' : '');
+            cell.textContent = numToHebrew(siman);
+            cell.title = wasLearned ? `סימן ${siman} — כבר נלמד` : `סימן ${siman}`;
+            if (!wasLearned) cell.onclick = () => toggleItem(itemStr, cell);
+            grid.appendChild(cell);
+        }
+
+        document.getElementById('gridSection').style.display = 'block';
+    }
+
+    function selectShulchanAruchSiman(part, siman, btnEl) {
+        document.querySelectorAll('#perekPickGrid .perek-btn').forEach(b => b.classList.remove('selected'));
+        btnEl.classList.add('selected');
+        document.getElementById('dividerAfterPerek').style.display = 'block';
+        document.getElementById('gridLabel').textContent = `${part} סימן ${siman} - בחר סעיפים:`;
+        const grid = document.getElementById('mainGrid');
+        grid.innerHTML = '';
+
+        const items = (trackingData[currentTrackStudyId] && trackingData[currentTrackStudyId][currentTrackDate]) || [];
+        const allLearned = getAllLearnedItems(currentTrackStudyId);
+        const realSeifim = (shulchanAruchData[part] && shulchanAruchData[part].simanim[siman]) || 1;
+
+        for (let seif = 1; seif <= realSeifim; seif++) {
+            const label = numToHebrew(seif);
+            const itemStr = `${part} סימן ${siman} סעיף ${label}`;
+            const cell = document.createElement('div');
+            const isToday = items.includes(itemStr);
+            const wasLearned = !isToday && allLearned.has(itemStr);
+            cell.className = 'tracker-cell' + (isToday ? ' selected' : wasLearned ? ' already-learned' : '');
+            cell.textContent = label;
+            cell.title = wasLearned ? `סעיף ${label} — כבר נלמד` : `סעיף ${label}`;
+            if (!wasLearned) cell.onclick = () => toggleItem(itemStr, cell);
+            grid.appendChild(cell);
+        }
+
+        document.getElementById('gridSection').style.display = 'block';
+    }
+
+    // =============================
+    //  בחירת חלק - משנה ברורה
+    // =============================
+    function selectMishnaBruraPart(part) {
+        currentMasechet = part;
+        const study = studies.find(s => s.id === currentTrackStudyId);
+        document.querySelectorAll('.masechet-btn').forEach(btn => {
+            btn.classList.toggle('selected', btn.textContent === part);
+        });
+        document.getElementById('dividerAfterMasechet').style.display = 'block';
+
+        const partData = mishnaBruraData[part];
+        if (!partData) return;
+        showMishnaBruraSimanimGrid(part, partData.startSiman, partData.endSiman);
+    }
+
+    function showMishnaBruraSimanimGrid(part, startSiman, endSiman) {
+        saveLastPosition(currentTrackStudyId, part);
+        document.getElementById('gridLabel').textContent = `${part} - בחר סימנים:`;
+        const grid = document.getElementById('mainGrid');
+        grid.innerHTML = '';
+
+        const items = (trackingData[currentTrackStudyId] && trackingData[currentTrackStudyId][currentTrackDate]) || [];
+        const allLearned = getAllLearnedItems(currentTrackStudyId);
+
+        for (let siman = startSiman; siman <= endSiman; siman++) {
+            const itemStr = `${part} סימן ${siman}`;
+            const cell = document.createElement('div');
+            const isToday = items.includes(itemStr);
+            const wasLearned = !isToday && allLearned.has(itemStr);
+            cell.className = 'tracker-cell' + (isToday ? ' selected' : wasLearned ? ' already-learned' : '');
+            cell.textContent = numToHebrew(siman);
+            cell.title = wasLearned ? `סימן ${siman} — כבר נלמד` : `סימן ${siman}`;
+            if (!wasLearned) cell.onclick = () => toggleItem(itemStr, cell);
+            grid.appendChild(cell);
+        }
+
+        document.getElementById('gridSection').style.display = 'block';
+    }
+
+    // selectMishnaBruraSiman הוסר - משנה ברורה עובדת לפי סימנים בלבד
+
+    // =============================
+    //  בחירת חלק - תניא
+    // =============================
+    function selectTanyaPart(part) {
+        currentMasechet = part;
+        document.querySelectorAll('.masechet-btn').forEach(btn => {
+            btn.classList.toggle('selected', btn.textContent === part);
+        });
+        document.getElementById('dividerAfterMasechet').style.display = 'block';
+
+        const totalChapters = tanyaData[part];
+        showTanyaChaptersGrid(part, totalChapters);
+    }
+
+    function showTanyaChaptersGrid(part, totalChapters) {
+        saveLastPosition(currentTrackStudyId, part);
+        document.getElementById('gridLabel').textContent = `${part} - בחר פרקים:`;
+        const grid = document.getElementById('mainGrid');
+        grid.innerHTML = '';
+
+        const items = (trackingData[currentTrackStudyId] && trackingData[currentTrackStudyId][currentTrackDate]) || [];
+        const allLearned = getAllLearnedItems(currentTrackStudyId);
+
+        for (let chapter = 1; chapter <= totalChapters; chapter++) {
+            const label = numToHebrew(chapter);
+            const itemStr = `${part} פרק ${label}`;
+            const cell = document.createElement('div');
+            const isToday = items.includes(itemStr);
+            const wasLearned = !isToday && allLearned.has(itemStr);
+            cell.className = 'tracker-cell' + (isToday ? ' selected' : wasLearned ? ' already-learned' : '');
+            cell.textContent = label;
+            cell.title = wasLearned ? `פרק ${label} — כבר נלמד` : `פרק ${label}`;
+            if (!wasLearned) cell.onclick = () => toggleItem(itemStr, cell);
+            grid.appendChild(cell);
+        }
+
+        document.getElementById('gridSection').style.display = 'block';
+    }
+
+    // =============================
+    //  מסילת ישרים
+    // =============================
+    function showMesilatYesharimGrid() {
+        document.getElementById('gridLabel').textContent = 'מסילת ישרים - בחר פרקים:';
+        const grid = document.getElementById('mainGrid');
+        grid.innerHTML = '';
+
+        const items = (trackingData[currentTrackStudyId] && trackingData[currentTrackStudyId][currentTrackDate]) || [];
+        const allLearned = getAllLearnedItems(currentTrackStudyId);
+
+        for (let chapter = 1; chapter <= mesilatYesharimData.totalChapters; chapter++) {
+            const label = numToHebrew(chapter);
+            const itemStr = `מסילת ישרים פרק ${label}`;
+            const cell = document.createElement('div');
+            const isToday = items.includes(itemStr);
+            const wasLearned = !isToday && allLearned.has(itemStr);
+            cell.className = 'tracker-cell' + (isToday ? ' selected' : wasLearned ? ' already-learned' : '');
+            cell.textContent = label;
+            cell.title = wasLearned ? `פרק ${label} — כבר נלמד` : `פרק ${label}`;
+            if (!wasLearned) cell.onclick = () => toggleItem(itemStr, cell);
+            grid.appendChild(cell);
+        }
+
+        document.getElementById('gridSection').style.display = 'block';
+    }
+
+    // =============================
+    //  בחירת שער - חובת הלבבות
+    // =============================
+    function selectChovatHaLevavotShaar(shaar) {
+        currentMasechet = shaar;
+        document.querySelectorAll('.masechet-btn').forEach(btn => {
+            btn.classList.toggle('selected', btn.textContent === shaar);
+        });
+        document.getElementById('dividerAfterMasechet').style.display = 'block';
+
+        const totalChapters = chovatHaLevavotData[shaar];
+        showChovatHaLevavotChaptersGrid(shaar, totalChapters);
+    }
+
+    function showChovatHaLevavotChaptersGrid(shaar, totalChapters) {
+        saveLastPosition(currentTrackStudyId, shaar);
+        document.getElementById('gridLabel').textContent = `${shaar} - בחר פרקים:`;
+        const grid = document.getElementById('mainGrid');
+        grid.innerHTML = '';
+
+        const items = (trackingData[currentTrackStudyId] && trackingData[currentTrackStudyId][currentTrackDate]) || [];
+        const allLearned = getAllLearnedItems(currentTrackStudyId);
+
+        for (let chapter = 1; chapter <= totalChapters; chapter++) {
+            const label = numToHebrew(chapter);
+            const itemStr = `${shaar} פרק ${label}`;
+            const cell = document.createElement('div');
+            const isToday = items.includes(itemStr);
+            const wasLearned = !isToday && allLearned.has(itemStr);
+            cell.className = 'tracker-cell' + (isToday ? ' selected' : wasLearned ? ' already-learned' : '');
+            cell.textContent = label;
+            cell.title = wasLearned ? `פרק ${label} — כבר נלמד` : `פרק ${label}`;
+            if (!wasLearned) cell.onclick = () => toggleItem(itemStr, cell);
+            grid.appendChild(cell);
+        }
+
+        document.getElementById('gridSection').style.display = 'block';
+    }
+
+    // =============================
+    //  בחירת מאמר - כוזרי
+    // =============================
+    function selectKuzariMaamar(maamar) {
+        currentMasechet = maamar;
+        document.querySelectorAll('.masechet-btn').forEach(btn => {
+            btn.classList.toggle('selected', btn.textContent === maamar);
+        });
+        document.getElementById('dividerAfterMasechet').style.display = 'block';
+
+        const totalSeifim = kuzariData[maamar];
+        showKuzariChaptersGrid(maamar, totalSeifim);
+    }
+
+    function showKuzariChaptersGrid(maamar, totalSeifim) {
+        saveLastPosition(currentTrackStudyId, maamar);
+        document.getElementById('gridLabel').textContent = `${maamar} - בחר סעיפים:`;
+        const grid = document.getElementById('mainGrid');
+        grid.innerHTML = '';
+
+        const items = (trackingData[currentTrackStudyId] && trackingData[currentTrackStudyId][currentTrackDate]) || [];
+        const allLearned = getAllLearnedItems(currentTrackStudyId);
+
+        for (let seif = 1; seif <= totalSeifim; seif++) {
+            const label = numToHebrew(seif);
+            const itemStr = `${maamar} סעיף ${label}`;
+            const cell = document.createElement('div');
+            const isToday = items.includes(itemStr);
+            const wasLearned = !isToday && allLearned.has(itemStr);
+            cell.className = 'tracker-cell' + (isToday ? ' selected' : wasLearned ? ' already-learned' : '');
+            cell.textContent = label;
+            cell.title = wasLearned ? `סעיף ${label} — כבר נלמד` : `סעיף ${label}`;
+            if (!wasLearned) cell.onclick = () => toggleItem(itemStr, cell);
+            grid.appendChild(cell);
+        }
+
+        document.getElementById('gridSection').style.display = 'block';
+    }
+
+    // =============================
+    //  בחירת מאמר - ספר העיקרים
+    // =============================
+    function selectSeferHaIkarimMaamar(maamar) {
+        currentMasechet = maamar;
+        document.querySelectorAll('.masechet-btn').forEach(btn => {
+            btn.classList.toggle('selected', btn.textContent === maamar);
+        });
+        document.getElementById('dividerAfterMasechet').style.display = 'block';
+
+        const totalChapters = seferHaIkarimData[maamar];
+        showSeferHaIkarimChaptersGrid(maamar, totalChapters);
+    }
+
+    function showSeferHaIkarimChaptersGrid(maamar, totalChapters) {
+        saveLastPosition(currentTrackStudyId, maamar);
+        document.getElementById('gridLabel').textContent = `${maamar} - בחר פרקים:`;
+        const grid = document.getElementById('mainGrid');
+        grid.innerHTML = '';
+
+        const items = (trackingData[currentTrackStudyId] && trackingData[currentTrackStudyId][currentTrackDate]) || [];
+        const allLearned = getAllLearnedItems(currentTrackStudyId);
+
+        for (let chapter = 1; chapter <= totalChapters; chapter++) {
+            const label = numToHebrew(chapter);
+            const itemStr = `${maamar} פרק ${label}`;
+            const cell = document.createElement('div');
+            const isToday = items.includes(itemStr);
+            const wasLearned = !isToday && allLearned.has(itemStr);
+            cell.className = 'tracker-cell' + (isToday ? ' selected' : wasLearned ? ' already-learned' : '');
+            cell.textContent = label;
+            cell.title = wasLearned ? `פרק ${label} — כבר נלמד` : `פרק ${label}`;
+            if (!wasLearned) cell.onclick = () => toggleItem(itemStr, cell);
+            grid.appendChild(cell);
+        }
+
+        document.getElementById('gridSection').style.display = 'block';
+    }
+
+    // =============================
+    //  גריד עליות לתורה
+    // =============================
+    function showTorahAliyotGrid(parsha) {
+        saveLastPosition(currentTrackStudyId, parsha);
+        document.getElementById('gridLabel').textContent = `פרשת ${parsha} - בחר עליות:`;
+        const grid = document.getElementById('mainGrid');
+        grid.innerHTML = '';
+
+        const items = (trackingData[currentTrackStudyId] && trackingData[currentTrackStudyId][currentTrackDate]) || [];
+        const allLearned = getAllLearnedItems(currentTrackStudyId);
+
+        const aliyotNames = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שביעי'];
+
+        for (let aliyah = 1; aliyah <= 7; aliyah++) {
+            const itemStr = `${parsha} עליה ${aliyotNames[aliyah - 1]}`;
+            const cell = document.createElement('div');
+            const isToday = items.includes(itemStr);
+            const wasLearned = !isToday && allLearned.has(itemStr);
+            cell.className = 'tracker-cell' + (isToday ? ' selected' : wasLearned ? ' already-learned' : '');
+            cell.textContent = numToHebrew(aliyah);
+            cell.title = wasLearned ? `עליה ${aliyotNames[aliyah - 1]} — כבר נלמד` : `עליה ${aliyotNames[aliyah - 1]}`;
+            if (!wasLearned) cell.onclick = () => toggleItem(itemStr, cell);
+            grid.appendChild(cell);
+        }
+
+        document.getElementById('gridSection').style.display = 'block';
+    }
+
+    // =============================
+    //  גריד פשוט ליחידות בודדות
+    // =============================
+    function showSimpleUnitGrid(labelType, labelValue, count, unitType) {
+        document.getElementById('gridLabel').textContent = `${labelType} ${labelValue} - בחר ${unitType === 'aliyah' ? 'פרשה' : 'יחידות'}:`;
+        const grid = document.getElementById('mainGrid');
+        grid.innerHTML = '';
+
+        const items = (trackingData[currentTrackStudyId] && trackingData[currentTrackStudyId][currentTrackDate]) || [];
+
+        const itemStr = `${labelValue}`;
+        const cell = document.createElement('div');
+        cell.className = 'tracker-cell' + (items.includes(itemStr) ? ' selected' : '');
+        cell.textContent = '✓';
+        cell.title = labelValue;
+        cell.onclick = () => toggleItem(itemStr, cell);
+        grid.appendChild(cell);
+
+        document.getElementById('gridSection').style.display = 'block';
+    }
+
+    // =============================
+    //  גריד דפים – תלמוד בבלי
+    // =============================
+    function numToHebrew(n) {
+        const units = ['', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט'];
+        const tens  = ['', 'י', 'כ', 'ל', 'מ', 'נ', 'ס', 'ע', 'פ', 'צ'];
+        const special = {15: 'טו', 16: 'טז'};
+        if (n <= 0) return '';
+        let result = '';
+        // מאות: ת=400, ש=300, ר=200, ק=100; מספרים מעל 400 מצרפים
+        let h = Math.floor(n / 100);
+        n %= 100;
+        while (h > 0) {
+            if (h >= 4) { result += 'ת'; h -= 4; }
+            else if (h >= 3) { result += 'ש'; h -= 3; }
+            else if (h >= 2) { result += 'ר'; h -= 2; }
+            else { result += 'ק'; h -= 1; }
+        }
+        if (special[n]) { result += special[n]; return result; }
+        if (n >= 10) { result += tens[Math.floor(n / 10)]; n %= 10; }
+        if (n > 0)   { result += units[n]; }
+        return result;
+    }
+
+    function showBavliDafGrid(masechet) {
+        saveLastPosition(currentTrackStudyId, masechet);
+        const totalDafim = bavliData[masechet];
+        document.getElementById('gridLabel').textContent = `מסכת ${masechet} — בחר דפים (ב–${numToHebrew(totalDafim)}):`;
+        const grid = document.getElementById('mainGrid');
+        grid.innerHTML = '';
+
+        const dateKey = currentTrackDate;
+        const items = (trackingData[currentTrackStudyId] && trackingData[currentTrackStudyId][dateKey]) || [];
+        const allLearned = getAllLearnedItems(currentTrackStudyId);
+
+        for (let daf = 2; daf <= totalDafim; daf++) {
+            const label = numToHebrew(daf);
+            const itemStr = `${masechet} דף ${label}`;
+            const cell = document.createElement('div');
+            const isToday = items.includes(itemStr);
+            const wasLearned = !isToday && allLearned.has(itemStr);
+            cell.className = 'tracker-cell' + (isToday ? ' selected' : wasLearned ? ' already-learned' : '');
+            cell.textContent = label;
+            cell.title = wasLearned ? `דף ${label} — כבר נלמד` : `דף ${label}`;
+            if (!wasLearned) cell.onclick = () => toggleItem(itemStr, cell);
+            grid.appendChild(cell);
+        }
+
+        document.getElementById('gridSection').style.display = 'block';
+        document.getElementById('stepPerekPick').style.display = 'none';
+        document.getElementById('dividerAfterPerek').style.display = 'none';
+    }
+
+    // =============================
+    //  גריד פרקים – משנה (מטרה: פרקים)
+    // =============================
+    function showMishnaChaptersGrid(masechet) {
+        const chapters = mishnaData[masechet];
+        if (!chapters) return;
+
+        saveLastPosition(currentTrackStudyId, masechet);
+        document.getElementById('gridLabel').textContent = `מסכת ${masechet} — בחר פרקים:`;
+        const grid = document.getElementById('mainGrid');
+        grid.innerHTML = '';
+
+        const items = (trackingData[currentTrackStudyId] && trackingData[currentTrackStudyId][currentTrackDate]) || [];
+        const allLearned = getAllLearnedItems(currentTrackStudyId);
+
+        chapters.forEach((_, idx) => {
+            const perekNum = idx + 1;
+            const label = numToHebrew(perekNum);
+            const itemStr = `${masechet} פרק ${label}`;
+            const cell = document.createElement('div');
+            const isToday = items.includes(itemStr);
+            const wasLearned = !isToday && allLearned.has(itemStr);
+            cell.className = 'tracker-cell' + (isToday ? ' selected' : wasLearned ? ' already-learned' : '');
+            cell.textContent = label;
+            cell.title = wasLearned ? `פרק ${label} — כבר נלמד` : `פרק ${label}`;
+            if (!wasLearned) cell.onclick = () => toggleItem(itemStr, cell);
+            grid.appendChild(cell);
+        });
+
+        document.getElementById('gridSection').style.display = 'block';
+        document.getElementById('stepPerekPick').style.display = 'none';
+        document.getElementById('dividerAfterPerek').style.display = 'none';
+    }
+
+    // =============================
+    //  בחירת פרק – משנה (מטרה: משניות)
+    // =============================
+    function showMishnaPerekPick(masechet) {
+        const chapters = mishnaData[masechet];
+        if (!chapters) return;
+
+        document.getElementById('step2Label').textContent = `בחר פרק במסכת ${masechet}:`;
+        const grid = document.getElementById('perekPickGrid');
+        grid.innerHTML = '';
+
+        chapters.forEach((_, idx) => {
+            const perekNum = idx + 1;
+            const label = numToHebrew(perekNum);
+            const btn = document.createElement('button');
+            btn.className = 'perek-btn';
+            btn.textContent = `פרק ${label}`;
+            btn.onclick = () => selectPerek(perekNum, btn);
+            grid.appendChild(btn);
+        });
+
+        document.getElementById('stepPerekPick').style.display = 'block';
+        document.getElementById('gridSection').style.display = 'none';
+        document.getElementById('dividerAfterPerek').style.display = 'none';
+    }
+
+    function selectPerek(perekNum, btnEl) {
+        currentPerek = perekNum;
+        saveLastPosition(currentTrackStudyId, currentMasechet, perekNum);
+        document.querySelectorAll('.perek-btn').forEach(b => b.classList.remove('selected'));
+        btnEl.classList.add('selected');
+        document.getElementById('dividerAfterPerek').style.display = 'block';
+        showMishnaGrid(currentMasechet, perekNum);
+    }
+
+    // =============================
+    //  גריד משניות – משנה (מטרה: משניות)
+    // =============================
+    function showMishnaGrid(masechet, perekNum) {
+        const chapters = mishnaData[masechet];
+        if (!chapters || perekNum < 1 || perekNum > chapters.length) return;
+        saveLastPosition(currentTrackStudyId, masechet, perekNum);
+        const mishnaCount = chapters[perekNum - 1];
+        const perekLabel = numToHebrew(perekNum);
+
+        document.getElementById('gridLabel').textContent =
+            `מסכת ${masechet} פרק ${perekLabel} — בחר משניות:`;
+
+        const grid = document.getElementById('mainGrid');
+        grid.innerHTML = '';
+
+        const items = (trackingData[currentTrackStudyId] && trackingData[currentTrackStudyId][currentTrackDate]) || [];
+        const allLearned = getAllLearnedItems(currentTrackStudyId);
+
+        for (let m = 1; m <= mishnaCount; m++) {
+            const mLabel = numToHebrew(m);
+            const itemStr = `${masechet} פרק ${perekLabel} משנה ${mLabel}`;
+            const cell = document.createElement('div');
+            const isToday = items.includes(itemStr);
+            const wasLearned = !isToday && allLearned.has(itemStr);
+            cell.className = 'tracker-cell' + (isToday ? ' selected' : wasLearned ? ' already-learned' : '');
+            cell.textContent = mLabel;
+            cell.title = wasLearned ? `משנה ${mLabel} — כבר נלמד` : `משנה ${mLabel}`;
+            if (!wasLearned) cell.onclick = () => toggleItem(itemStr, cell);
+            grid.appendChild(cell);
+        }
+
+        document.getElementById('gridSection').style.display = 'block';
+    }
+
+
+    // =============================
+    //  הקדמות הרמב"ם למשנה
+    // =============================
+    function selectRambamIntroPart(part) {
+        currentMasechet = part;
+        saveLastPosition(currentTrackStudyId, part);
+        document.querySelectorAll('.masechet-btn').forEach(btn => {
+            btn.classList.toggle('selected', btn.textContent === part);
+        });
+        document.getElementById('dividerAfterMasechet').style.display = 'block';
+        showRambamIntroGrid(part);
+    }
+
+    function showRambamIntroGrid(part) {
+        const totalParagraphs = rambamIntroData[part];
+        saveLastPosition(currentTrackStudyId, part);
+        document.getElementById('gridLabel').textContent = `${part} — בחר פסקאות:`;
+        const grid = document.getElementById('mainGrid');
+        grid.innerHTML = '';
+
+        const items = (trackingData[currentTrackStudyId] && trackingData[currentTrackStudyId][currentTrackDate]) || [];
+        const allLearned = getAllLearnedItems(currentTrackStudyId);
+
+        for (let p = 1; p <= totalParagraphs; p++) {
+            const label = numToHebrew(p);
+            const itemStr = `${part} פסקה ${label}`;
+            const cell = document.createElement('div');
+            const isToday = items.includes(itemStr);
+            const wasLearned = !isToday && allLearned.has(itemStr);
+            cell.className = 'tracker-cell' + (isToday ? ' selected' : wasLearned ? ' already-learned' : '');
+            cell.textContent = label;
+            cell.title = wasLearned ? `פסקה ${label} — כבר נלמד` : `פסקה ${label}`;
+            if (!wasLearned) cell.onclick = () => toggleItem(itemStr, cell);
+            grid.appendChild(cell);
+        }
+
+        document.getElementById('gridSection').style.display = 'block';
+        document.getElementById('stepPerekPick').style.display = 'none';
+        document.getElementById('dividerAfterPerek').style.display = 'none';
+    }
+
+    // =============================
+    //  Toggle פריט (דף / פרק / משנה)
+    // =============================
+    function toggleItem(itemStr, cellEl) {
+        if (!trackingData[currentTrackStudyId]) trackingData[currentTrackStudyId] = {};
+        if (!trackingData[currentTrackStudyId][currentTrackDate]) trackingData[currentTrackStudyId][currentTrackDate] = [];
+
+        const list = trackingData[currentTrackStudyId][currentTrackDate];
+        const idx = list.indexOf(itemStr);
+        if (idx === -1) {
+            list.push(itemStr);
+            cellEl.classList.add('selected');
+        } else {
+            list.splice(idx, 1);
+            cellEl.classList.remove('selected');
+        }
+        // לא שומרים כאן — שמירה רק בלחיצת "סיום"
+        renderTrackedItems();
+    }
+
+    // =============================
+    //  רשימת פריטים שדווחו
+    // =============================
+    function renderTrackedItems() {
+        const container = document.getElementById('trackedItemsList');
+        container.innerHTML = '';
+        const items = (trackingData[currentTrackStudyId] && trackingData[currentTrackStudyId][currentTrackDate]) || [];
+        if (items.length === 0) {
+            container.innerHTML = '<div style="text-align:center; color:gray; font-size:14px;">לא הוזן לימוד ליום זה</div>';
+            return;
+        }
+        items.forEach(item => {
+            container.innerHTML += `
+                <div class="tracked-item">
+                    <span>${item}</span>
+                    <span class="delete-item" onclick="removeTrackedItem('${item.replace(/'/g, "\\'")}')">✕</span>
+                </div>
+            `;
+        });
+    }
+
+    function removeTrackedItem(itemString) {
+        const list = trackingData[currentTrackStudyId] && trackingData[currentTrackStudyId][currentTrackDate];
+        if (!list) return;
+        const index = list.indexOf(itemString);
+        if (index > -1) {
+            list.splice(index, 1);
+            // לא שומרים כאן — שמירה רק בלחיצת "סיום"
+            renderTrackedItems();
+            // רענן את הגריד הפעיל
+            const study = studies.find(s => s.id === currentTrackStudyId);
+            if (study && currentMasechet) {
+                if (study.type === 'nach') showNachChaptersGrid(currentMasechet);
+                else if (study.type === 'bavli') showBavliDafGrid(currentMasechet);
+                else if (study.type === 'tanya') showTanyaChaptersGrid(currentMasechet, tanyaData[currentMasechet]);
+                else if (study.type === 'rambamIntro') showRambamIntroGrid(currentMasechet);
+                else if (study.type === 'mesilatYesharim') showMesilatYesharimGrid();
+                else if (study.type === 'chovatHaLevavot') showChovatHaLevavotChaptersGrid(currentMasechet, chovatHaLevavotData[currentMasechet]);
+                else if (study.type === 'kuzari') showKuzariChaptersGrid(currentMasechet, kuzariData[currentMasechet]);
+                else if (study.type === 'seferHaIkarim') showSeferHaIkarimChaptersGrid(currentMasechet, seferHaIkarimData[currentMasechet]);
+                else if (study.goalUnit === 'chapters') showMishnaChaptersGrid(currentMasechet);
+                else if (currentPerek) showMishnaGrid(currentMasechet, currentPerek);
+            }
+        }
+    }
+
+    // =============================
+    //  שמירה וסגירה
+    // =============================
+    async function finishTracking() {
+        // נקה שדות ריקים שנוצרו מפתיחת המודל בלי לסמן כלום
+        if (currentTrackStudyId && currentTrackDate) {
+            const dayItems = trackingData[currentTrackStudyId] && trackingData[currentTrackStudyId][currentTrackDate];
+            if (dayItems && dayItems.length === 0) {
+                delete trackingData[currentTrackStudyId][currentTrackDate];
+            }
+        }
+        await saveData();
+        renderTable();
+        closeModals();
+    }
+
+    function closeModals() {
+        document.getElementById('addModal').style.display = 'none';
+        document.getElementById('trackModal').style.display = 'none';
+        document.getElementById('statsModal').style.display = 'none';
+        document.getElementById('deleteConfirmModal').style.display = 'none';
+        document.getElementById('studyName').value = '';
+    }
+
+    function closeDeleteConfirm() {
+        document.getElementById('deleteConfirmModal').style.display = 'none';
+    }
+
+    window.onclick = function(event) {
+        if (event.target.classList.contains('modal-overlay')) {
+            // אם זה מודל הדיווח — שמור לפני סגירה
+            if (event.target.id === 'trackModal') {
+                finishTracking();
+            } else {
+                closeModals();
+            }
+        }
+    };
+
+    // =============================
+    //  סטטיסטיקה ומחיקה
+    // =============================
+    let currentStatsStudyId = null;
+
+    function openStatsModal(studyId) {
+        currentStatsStudyId = studyId;
+        const study = studies.find(s => s.id === studyId);
+        if (!study) return;
+
+        const displayName = study.name || getStudyTypeName(study.type);
+        document.getElementById('statsModalTitle').textContent = '📊 ' + displayName;
+
+        const data = trackingData[studyId] || {};
+        const allDates = Object.keys(data).sort();
+        const daysWithStudy = allDates.filter(d => data[d] && data[d].length > 0);
+
+        // סה"כ ימים
+        document.getElementById('statTotalDays').textContent = daysWithStudy.length;
+
+        // סה"כ יחידות
+        let totalUnits = 0;
+        allDates.forEach(d => { totalUnits += (data[d] || []).length; });
+        document.getElementById('statTotalUnits').textContent = totalUnits;
+
+        // תווית יחידות
+        const unitLabels = {
+            'pages':'דפים שנלמדו','mishnayot':'משניות שנלמדו','chapters':'פרקים שנלמדו',
+            'aliyot':'עליות שנלמדו','parshiyot':'פרשיות שנלמדו','halachot':'הלכות שנלמדו',
+            'seifim':'סעיפים שנלמדו','simanim':'סימנים שנלמדו'
+        };
+        document.getElementById('statUnitsLabel').textContent = unitLabels[study.goalUnit] || 'יחידות שנלמדו';
+
+        // רצף נוכחי
+        const today = new Date();
+        let streak = 0;
+        for (let i = 0; i < 365; i++) {
+            const d = new Date(today); d.setDate(today.getDate() - i);
+            const key = d.toISOString().split('T')[0];
+            if (data[key] && data[key].length > 0) { streak++; }
+            else if (i > 0) { break; }
+        }
+        document.getElementById('statStreak').textContent = streak;
+
+        // רצף מקסימלי
+        let bestStreak = 0, curStreak = 0;
+        daysWithStudy.slice().sort().forEach((d, i, arr) => {
+            if (i === 0) { curStreak = 1; }
+            else {
+                const diff = (new Date(d) - new Date(arr[i-1])) / 86400000;
+                curStreak = diff === 1 ? curStreak + 1 : 1;
+            }
+            if (curStreak > bestStreak) bestStreak = curStreak;
+        });
+        document.getElementById('statBestStreak').textContent = bestStreak;
+
+        // סרגל 30 ימים
+        const bar = document.getElementById('statStreakBar');
+        bar.innerHTML = '';
+        for (let i = 29; i >= 0; i--) {
+            const d = new Date(today); d.setDate(today.getDate() - i);
+            const key = d.toISOString().split('T')[0];
+            const count = (data[key] || []).length;
+            const dot = document.createElement('div');
+            dot.className = 'streak-dot' + (count === 0 ? '' : count >= study.goalAmount ? ' done' : ' partial');
+            dot.title = key + ': ' + count + ' יחידות';
+            bar.appendChild(dot);
+        }
+
+        // אחוז התקדמות כוללת
+        renderStatsProgress(study, data);
+
+        // גריד גלישה מפורט
+        renderStatsBrowse(study, data);
+
+        // כפתור מחיקה - מוגדר כאן ישירות כדי למנוע בעיות onclick
+        const deleteBtn = document.getElementById('deleteStudyBtn');
+        deleteBtn.onclick = function() { doDeleteStudy(studyId, displayName); };
+
+        document.getElementById('statsModal').style.display = 'flex';
+    }
+
+    function doDeleteStudy(studyId, displayName) {
+        _pendingDeleteStudyId = studyId;
+        _pendingDeleteDisplayName = displayName;
+        document.getElementById('deleteConfirmText').textContent =
+            'האם למחוק את הלימוד "' + displayName + '"?';
+        document.getElementById('confirmDeleteBtn').onclick = executeDelete;
+        document.getElementById('deleteConfirmModal').style.display = 'flex';
+    }
+
+    async function executeDelete() {
+        if (!_pendingDeleteStudyId) return;
+        studies = studies.filter(s => s.id !== _pendingDeleteStudyId);
+        delete trackingData[_pendingDeleteStudyId];
+        await saveData();
+        closeModals();
+        renderTable();
+        _pendingDeleteStudyId = null;
+        _pendingDeleteDisplayName = null;
+    }
+
+    // =============================
+    //  חישוב אחוז התקדמות
+    // =============================
+    function getTotalPossibleUnits(study) {
+        switch (study.type) {
+            case 'bavli': {
+                const total = Object.values(bavliData).reduce((s, v) => s + (v - 1), 0); // דף ב' עד סוף
+                return { total, unit: 'דפים' };
+            }
+            case 'mishna': {
+                if (study.goalUnit === 'chapters') {
+                    const total = Object.values(mishnaData).reduce((s, arr) => s + arr.length, 0);
+                    return { total, unit: 'פרקים' };
+                } else {
+                    const total = Object.values(mishnaData).reduce((s, arr) => s + arr.reduce((a,b)=>a+b,0), 0);
+                    return { total, unit: 'משניות' };
+                }
+            }
+            case 'torah': {
+                if (study.goalUnit === 'aliyot') return { total: torahParshiyot.length * 7, unit: 'עליות' };
+                return { total: torahParshiyot.length, unit: 'פרשיות' };
+            }
+            case 'nach': {
+                const total = Object.values(neviimData).reduce((s,v)=>s+v,0) + Object.values(ketuvimData).reduce((s,v)=>s+v,0);
+                return { total, unit: 'פרקים' };
+            }
+            case 'rambam': {
+                const total = Object.values(rambamData).reduce((s, halachot) =>
+                    s + Object.values(halachot).reduce((a,b)=>a+b,0), 0);
+                return { total, unit: 'פרקים' };
+            }
+            case 'shulchanAruch': {
+                const total = Object.values(shulchanAruchData).reduce((s, p) => {
+                    if (study.goalUnit === 'simanim') return s + p.totalSimanim;
+                    return s + Object.values(p.simanim).reduce((a,b)=>a+b,0);
+                }, 0);
+                return { total, unit: study.goalUnit === 'simanim' ? 'סימנים' : 'סעיפים' };
+            }
+            case 'mishnaBrura': {
+                const total = Object.values(mishnaBruraData).reduce((s,p) => s + (p.endSiman - p.startSiman + 1), 0);
+                return { total, unit: 'סימנים' };
+            }
+            case 'tanya': {
+                const total = Object.values(tanyaData).reduce((s,v)=>s+v,0);
+                return { total, unit: 'פרקים' };
+            }
+            case 'mesilatYesharim': return { total: mesilatYesharimData.totalChapters, unit: 'פרקים' };
+            case 'chovatHaLevavot': {
+                const total = Object.values(chovatHaLevavotData).reduce((s,v)=>s+v,0);
+                return { total, unit: 'פרקים' };
+            }
+            case 'kuzari': {
+                const total = Object.values(kuzariData).reduce((s,v)=>s+v,0);
+                return { total, unit: 'סעיפים' };
+            }
+            case 'seferHaIkarim': {
+                const total = Object.values(seferHaIkarimData).reduce((s,v)=>s+v,0);
+                return { total, unit: 'פרקים' };
+            }
+            case 'rambamIntro': {
+                const total = Object.values(rambamIntroData).reduce((s,v)=>s+v,0);
+                return { total, unit: 'פסקאות' };
+            }
+        }
+        return null;
+    }
+
+    function renderStatsProgress(study, data) {
+        const info = getTotalPossibleUnits(study);
+        const section = document.getElementById('statProgressSection');
+        if (!info || info.total === 0) { section.style.display = 'none'; return; }
+        section.style.display = 'block';
+
+        // ספור יחידות ייחודיות שנלמדו
+        const learned = new Set();
+        Object.values(data).forEach(items => items.forEach(i => learned.add(i)));
+        const done = learned.size;
+        const pct = Math.min(100, Math.round(done / info.total * 100));
+
+        document.getElementById('statProgressPct').textContent = pct + '%';
+        document.getElementById('statProgressBar').style.width = pct + '%';
+        document.getElementById('statProgressDetail').textContent =
+            done + ' מתוך ' + info.total + ' ' + info.unit;
+    }
+
+    // =============================
+    //  גריד גלישה מפורט
+    // =============================
+    function renderStatsBrowse(study, data) {
+        // אסוף את כל הפריטים שנלמדו לסט
+        const learned = new Set();
+        Object.values(data).forEach(items => items.forEach(i => learned.add(i)));
+
+        const grid1 = document.getElementById('statsBrowseGrid1');
+        const label = document.getElementById('statsBrowseLabel');
+        grid1.innerHTML = '';
+        document.getElementById('statsBrowseLevel2').style.display = 'none';
+        document.getElementById('statsBrowseResult').style.display = 'none';
+
+        if (study.type === 'bavli') {
+            label.textContent = 'בחר מסכת:';
+            masechtotBavliList.forEach(m => {
+                const total = bavliData[m] - 1;
+                const done = Array.from(learned).filter(i => i.startsWith(m + ' דף ')).length;
+                addBrowseBtn(grid1, m, done, total, () => showBrowseResultGrid(
+                    study, learned, m + ' דף ',
+                    Array.from({length: total}, (_, i) => numToHebrew(i+2)),
+                    v => m + ' דף ' + v, m + ' — דפים'
+                ));
+            });
+        } else if (study.type === 'mishna') {
+            label.textContent = 'בחר מסכת:';
+            masechtotMishnaList.forEach(m => {
+                const chaps = mishnaData[m];
+                let total, done;
+                if (study.goalUnit === 'chapters') {
+                    total = chaps.length;
+                    done = Array.from(learned).filter(i => i.startsWith(m + ' פרק ')).length;
+                    addBrowseBtn(grid1, m, done, total, () => showBrowseResultGrid(
+                        study, learned, m + ' פרק ',
+                        Array.from({length: total}, (_, i) => numToHebrew(i+1)),
+                        v => m + ' פרק ' + v, m + ' — פרקים'
+                    ));
+                } else {
+                    total = chaps.reduce((a,b)=>a+b,0);
+                    done = Array.from(learned).filter(i => i.startsWith(m + ' פרק ')).length;
+                    addBrowseBtn(grid1, m, done, total, () => showMishnaPerekBrowse(study, learned, m));
+                }
+            });
+        } else if (study.type === 'torah') {
+            label.textContent = 'בחר פרשה:';
+            torahParshiyot.forEach(p => {
+                const total = study.goalUnit === 'aliyot' ? 7 : 1;
+                let done;
+                if (study.goalUnit === 'aliyot') {
+                    done = Array.from(learned).filter(i => i.startsWith(p + ' עליה ')).length;
+                    addBrowseBtn(grid1, p, done, total, () => showBrowseResultGrid(
+                        study, learned, p + ' עליה ',
+                        ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שביעי'],
+                        v => p + ' עליה ' + v, p + ' — עליות'
+                    ));
+                } else {
+                    done = learned.has(p) ? 1 : 0;
+                    addBrowseBtn(grid1, p, done, 1, () => {});
+                }
+            });
+        } else if (study.type === 'nach') {
+            label.textContent = 'בחר ספר:';
+            [...Object.keys(neviimData), ...Object.keys(ketuvimData)].forEach(book => {
+                const total = neviimData[book] || ketuvimData[book];
+                const done = Array.from(learned).filter(i => i.startsWith(book + ' פרק ')).length;
+                addBrowseBtn(grid1, book, done, total, () => showBrowseResultGrid(
+                    study, learned, book + ' פרק ',
+                    Array.from({length: total}, (_, i) => numToHebrew(i+1)),
+                    v => book + ' פרק ' + v, book + ' — פרקים'
+                ));
+            });
+        } else if (study.type === 'rambam') {
+            label.textContent = 'בחר ספר:';
+            Object.keys(rambamData).forEach(sefer => {
+                const halachot = rambamData[sefer];
+                const total = Object.values(halachot).reduce((a,b)=>a+b,0);
+                const done = Array.from(learned).filter(i => i.startsWith(sefer + ' ')).length;
+                addBrowseBtn(grid1, sefer, done, total, () => showRambamHalachotBrowse(study, learned, sefer));
+            });
+        } else if (study.type === 'shulchanAruch') {
+            label.textContent = 'בחר חלק:';
+            Object.keys(shulchanAruchData).forEach(part => {
+                const p = shulchanAruchData[part];
+                const total = study.goalUnit === 'simanim' ? p.totalSimanim : Object.values(p.simanim).reduce((a,b)=>a+b,0);
+                const done = Array.from(learned).filter(i => i.startsWith(part + ' ')).length;
+                addBrowseBtn(grid1, part, done, total, () => {
+                    if (study.goalUnit === 'simanim') {
+                        showBrowseResultGrid(study, learned, part + ' סימן ',
+                            Array.from({length: p.totalSimanim}, (_, i) => numToHebrew(i+1)),
+                            v => part + ' סימן ' + v, part + ' — סימנים');
+                    } else {
+                        showShulchanAruchSimanBrowse(study, learned, part);
+                    }
+                });
+            });
+        } else if (study.type === 'mishnaBrura') {
+            label.textContent = 'בחר חלק:';
+            Object.keys(mishnaBruraData).forEach(part => {
+                const p = mishnaBruraData[part];
+                const total = p.endSiman - p.startSiman + 1;
+                const done = Array.from(learned).filter(i => i.startsWith(part + ' ')).length;
+                addBrowseBtn(grid1, part, done, total, () => showBrowseResultGrid(
+                    study, learned, part + ' סימן ',
+                    Array.from({length: total}, (_, i) => numToHebrew(p.startSiman + i)),
+                    v => part + ' סימן ' + v, part + ' — סימנים'
+                ));
+            });
+        } else if (study.type === 'tanya') {
+            label.textContent = 'בחר חלק:';
+            Object.keys(tanyaData).forEach(part => {
+                const total = tanyaData[part];
+                const done = Array.from(learned).filter(i => i.startsWith(part + ' פרק ')).length;
+                addBrowseBtn(grid1, part, done, total, () => showBrowseResultGrid(
+                    study, learned, part + ' פרק ',
+                    Array.from({length: total}, (_, i) => numToHebrew(i+1)),
+                    v => part + ' פרק ' + v, part + ' — פרקים'
+                ));
+            });
+        } else if (study.type === 'mesilatYesharim') {
+            label.textContent = 'פרקים:';
+            const total = mesilatYesharimData.totalChapters;
+            showBrowseResultGrid(study, learned, 'מסילת ישרים פרק ',
+                Array.from({length: total}, (_, i) => numToHebrew(i+1)),
+                v => 'מסילת ישרים פרק ' + v, 'מסילת ישרים — פרקים');
+            return;
+        } else if (study.type === 'chovatHaLevavot') {
+            label.textContent = 'בחר שער:';
+            Object.keys(chovatHaLevavotData).forEach(shaar => {
+                const total = chovatHaLevavotData[shaar];
+                const done = Array.from(learned).filter(i => i.startsWith(shaar + ' פרק ')).length;
+                addBrowseBtn(grid1, shaar, done, total, () => showBrowseResultGrid(
+                    study, learned, shaar + ' פרק ',
+                    Array.from({length: total}, (_, i) => numToHebrew(i+1)),
+                    v => shaar + ' פרק ' + v, shaar + ' — פרקים'
+                ));
+            });
+        } else if (study.type === 'kuzari') {
+            label.textContent = 'בחר מאמר:';
+            Object.keys(kuzariData).forEach(maamar => {
+                const total = kuzariData[maamar];
+                const done = Array.from(learned).filter(i => i.startsWith(maamar + ' סעיף ')).length;
+                addBrowseBtn(grid1, maamar, done, total, () => showBrowseResultGrid(
+                    study, learned, maamar + ' סעיף ',
+                    Array.from({length: total}, (_, i) => numToHebrew(i+1)),
+                    v => maamar + ' סעיף ' + v, maamar + ' — סעיפים'
+                ));
+            });
+        } else if (study.type === 'seferHaIkarim') {
+            label.textContent = 'בחר מאמר:';
+            Object.keys(seferHaIkarimData).forEach(maamar => {
+                const total = seferHaIkarimData[maamar];
+                const done = Array.from(learned).filter(i => i.startsWith(maamar + ' פרק ')).length;
+                addBrowseBtn(grid1, maamar, done, total, () => showBrowseResultGrid(
+                    study, learned, maamar + ' פרק ',
+                    Array.from({length: total}, (_, i) => numToHebrew(i+1)),
+                    v => maamar + ' פרק ' + v, maamar + ' — פרקים'
+                ));
+            });
+        } else if (study.type === 'rambamIntro') {
+            label.textContent = 'בחר חלק:';
+            Object.keys(rambamIntroData).forEach(part => {
+                const total = rambamIntroData[part];
+                const done = Array.from(learned).filter(i => i.startsWith(part + ' פסקה ')).length;
+                addBrowseBtn(grid1, part, done, total, () => showBrowseResultGrid(
+                    study, learned, part + ' פסקה ',
+                    Array.from({length: total}, (_, i) => numToHebrew(i+1)),
+                    v => part + ' פסקה ' + v, part + ' — פסקאות'
+                ));
+            });
+        }
+    }
+
+    function addBrowseBtn(container, label, done, total, onClick) {
+        const btn = document.createElement('button');
+        const pct = total > 0 ? Math.round(done / total * 100) : 0;
+        btn.className = 'masechet-btn';
+        btn.style.position = 'relative';
+        btn.style.overflow = 'hidden';
+        // רקע לתצוגת אחוז
+        if (pct > 0) {
+            const fill = document.createElement('div');
+            fill.style.cssText = `position:absolute;inset:0;width:${pct}%;background:rgba(76,175,80,0.18);pointer-events:none;`;
+            btn.appendChild(fill);
+        }
+        const txt = document.createElement('span');
+        txt.style.position = 'relative';
+        txt.textContent = label;
+        btn.appendChild(txt);
+        if (total > 0) {
+            const sub = document.createElement('div');
+            sub.style.cssText = 'font-size:10px;color:var(--text-muted);position:relative;';
+            sub.textContent = done + '/' + total;
+            btn.appendChild(sub);
+        }
+        btn.onclick = onClick;
+        container.appendChild(btn);
+    }
+
+    function showBrowseResultGrid(study, learned, prefix, labels, keyFn, title) {
+        document.getElementById('statsBrowseResultLabel').textContent = title + ':';
+        const grid = document.getElementById('statsBrowseResultGrid');
+        grid.innerHTML = '';
+        labels.forEach(lbl => {
+            const key = keyFn(lbl);
+            const cell = document.createElement('div');
+            cell.className = 'tracker-cell' + (learned.has(key) ? ' selected' : '');
+            cell.style.pointerEvents = 'none';
+            cell.textContent = lbl;
+            cell.title = key;
+            grid.appendChild(cell);
+        });
+        document.getElementById('statsBrowseResult').style.display = 'block';
+    }
+
+    function showMishnaPerekBrowse(study, learned, masechet) {
+        const chaps = mishnaData[masechet];
+        document.getElementById('statsBrowseLabel2').textContent = 'בחר פרק ב' + masechet + ':';
+        const grid2 = document.getElementById('statsBrowseGrid2');
+        grid2.innerHTML = '';
+        chaps.forEach((mishnaCount, idx) => {
+            const perekNum = idx + 1;
+            const lbl = numToHebrew(perekNum);
+            const done = Array.from(learned).filter(i => i.startsWith(masechet + ' פרק ' + lbl + ' משנה ')).length;
+            addBrowseBtn(grid2, 'פרק ' + lbl, done, mishnaCount, () => showBrowseResultGrid(
+                study, learned, masechet + ' פרק ' + lbl + ' משנה ',
+                Array.from({length: mishnaCount}, (_, i) => numToHebrew(i+1)),
+                v => masechet + ' פרק ' + lbl + ' משנה ' + v,
+                masechet + ' פרק ' + lbl + ' — משניות'
+            ));
+        });
+        document.getElementById('statsBrowseLevel2').style.display = 'block';
+        document.getElementById('statsBrowseResult').style.display = 'none';
+    }
+
+    function showRambamHalachotBrowse(study, learned, sefer) {
+        const halachot = rambamData[sefer];
+        document.getElementById('statsBrowseLabel2').textContent = 'בחר הלכה ב' + sefer + ':';
+        const grid2 = document.getElementById('statsBrowseGrid2');
+        grid2.innerHTML = '';
+        Object.keys(halachot).forEach(halacha => {
+            const total = halachot[halacha];
+            const done = Array.from(learned).filter(i => i.startsWith(sefer + ' ' + halacha + ' פרק ')).length;
+            addBrowseBtn(grid2, halacha, done, total, () => showBrowseResultGrid(
+                study, learned, sefer + ' ' + halacha + ' פרק ',
+                Array.from({length: total}, (_, i) => numToHebrew(i+1)),
+                v => sefer + ' ' + halacha + ' פרק ' + v,
+                sefer + ' ' + halacha + ' — פרקים'
+            ));
+        });
+        document.getElementById('statsBrowseLevel2').style.display = 'block';
+        document.getElementById('statsBrowseResult').style.display = 'none';
+    }
+
+    function showShulchanAruchSimanBrowse(study, learned, part) {
+        const simanim = shulchanAruchData[part].simanim;
+        document.getElementById('statsBrowseLabel2').textContent = 'בחר סימן ב' + part + ':';
+        const grid2 = document.getElementById('statsBrowseGrid2');
+        grid2.innerHTML = '';
+        Object.keys(simanim).forEach(siman => {
+            const total = simanim[siman];
+            const done = Array.from(learned).filter(i => i.startsWith(part + ' סימן ' + siman + ' סעיף ')).length;
+            addBrowseBtn(grid2, 'סי\' ' + siman, done, total, () => showBrowseResultGrid(
+                study, learned, part + ' סימן ' + siman + ' סעיף ',
+                Array.from({length: total}, (_, i) => numToHebrew(i+1)),
+                v => part + ' סימן ' + siman + ' סעיף ' + v,
+                part + ' סימן ' + siman + ' — סעיפים'
+            ));
+        });
+        document.getElementById('statsBrowseLevel2').style.display = 'block';
+        document.getElementById('statsBrowseResult').style.display = 'none';
+    }
+
+
+    // =============================
+    //  ייצוא אקסל
+    // =============================
+    function exportToExcel() {
+        const rows = [];
+        // Header row
+        rows.push(['שם הלימוד', 'סוג', 'תאריך', 'פריט שנלמד']);
+
+        studies.forEach(study => {
+            const displayName = study.name || getStudyTypeName(study.type);
+            const data = trackingData[study.id] || {};
+            const allDates = Object.keys(data).sort();
+            if (allDates.length === 0) {
+                rows.push([displayName, getStudyTypeName(study.type), '', '']);
+            } else {
+                allDates.forEach(date => {
+                    const items = data[date] || [];
+                    if (items.length === 0) {
+                        rows.push([displayName, getStudyTypeName(study.type), date, '']);
+                    } else {
+                        items.forEach(item => {
+                            rows.push([displayName, getStudyTypeName(study.type), date, item]);
+                        });
+                    }
+                });
+            }
+        });
+
+        // Build CSV content (UTF-8 BOM for Excel Hebrew support)
+        // התאריך מוקף בגרש (') כדי שאקסל יתייחס אליו כטקסט ולא כתאריך (מונע הצגת #####)
+        const csvContent = '\uFEFF' + rows.map((row, rowIdx) =>
+            row.map((cell, colIdx) => {
+                const s = String(cell);
+                // עמודת תאריך (אינדקס 2) בשורות נתונים — הוסף גרש כדי לכפות טקסט
+                if (rowIdx > 0 && colIdx === 2 && s) {
+                    return '"\'' + s + '"';
+                }
+                return '"' + s.replace(/"/g, '""') + '"';
+            }).join(',')
+        ).join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const today = new Date().toISOString().split('T')[0];
+        a.download = 'מעקב_לימודים_' + today + '.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    init();
+
+    // =============================
+    //  רישום Service Worker (PWA)
+    // =============================
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('Service Worker רשום:', reg.scope))
+                .catch(err => console.warn('שגיאה ברישום Service Worker:', err));
+        });
+    }
+    </script>
+</body>
+</html>
