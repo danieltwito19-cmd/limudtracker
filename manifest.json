@@ -2,7 +2,7 @@
   "name": "מעקב לימודים",
   "short_name": "לימודים",
   "description": "מעקב יומי אחר לימוד תורה",
-  "start_url": "./index.html",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#f5f5f5",
   "theme_color": "#333333",
