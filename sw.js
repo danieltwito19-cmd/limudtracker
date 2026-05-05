@@ -1,15 +1,17 @@
-const CACHE_NAME = 'limudim-2026-05-05';
+const VERSION = '1.0.2';
+const CACHE_NAME = `limudim-${VERSION}`;
 const CORE_ASSETS = [
   './index.html',
   './manifest.json'
 ];
 
-// ===== התקנה — שמור קבצים בסיסיים לקאש =====
+// ===== התקנה =====
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(CORE_ASSETS))
   );
-  self.skipWaiting();
+  // אל תחכה לכל הלקוחות שייסגרו — עבור ל-activate מיד
+  // (self.skipWaiting לא נקרא כאן בכוונה — נחכה לאישור המשתמש)
 });
 
 // ===== הפעלה — נקה קאש ישן =====
@@ -20,6 +22,16 @@ self.addEventListener('activate', event => {
     )
   );
   self.clients.claim();
+});
+
+// ===== הודעות מהאפליקציה =====
+self.addEventListener('message', event => {
+  if (event.data === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+  if (event.data === 'GET_VERSION') {
+    event.source.postMessage({ type: 'VERSION', version: VERSION });
+  }
 });
 
 // ===== בקשות רשת =====
@@ -56,7 +68,6 @@ self.addEventListener('fetch', event => {
       const fromNet = await networkPromise;
       if (fromNet) return fromNet;
 
-      // fallback לדף הראשי
       return cache.match('./index.html');
     })
   );
