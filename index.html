@@ -3137,22 +3137,40 @@
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').then(reg => {
 
-            // קבל גרסה מה-SW הפעיל
-            if (navigator.serviceWorker.controller) {
+            // קבל גרסה — נסה מה-SW הפעיל, ואם אין fallback לקריאת sw.js ישירות
+            const askVersion = (worker) => {
                 const mc = new MessageChannel();
                 mc.port1.onmessage = e => {
                     if (e.data && e.data.type === 'VERSION') {
                         document.getElementById('appVersion').textContent = 'v' + e.data.version;
                     }
                 };
-                navigator.serviceWorker.controller.postMessage('GET_VERSION', [mc.port2]);
+                worker.postMessage('GET_VERSION', [mc.port2]);
+            };
+
+            if (navigator.serviceWorker.controller) {
+                askVersion(navigator.serviceWorker.controller);
+            } else {
+                // SW הותקן עכשיו — חכה שישתלט ואז שאל
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    if (navigator.serviceWorker.controller) {
+                        askVersion(navigator.serviceWorker.controller);
+                    }
+                }, { once: true });
+                // fallback: קרא את sw.js וחלץ את הגרסה בעצמנו
+                fetch('./sw.js').then(r => r.text()).then(text => {
+                    const m = text.match(/VERSION\s*=\s*['"]([^'"]+)['"]/);
+                    if (m) document.getElementById('appVersion').textContent = 'v' + m[1];
+                }).catch(() => {});
             }
 
             // SW חדש ממתין — הצג באנר עדכון
             const checkWaiting = (worker) => {
-                if (worker && worker.state === 'installed' && navigator.serviceWorker.controller) {
+                if (worker && worker.state === 'installed') {
                     _swWaitingWorker = worker;
                     document.getElementById('updateBanner').classList.add('show');
+                    // הצג גם את הגרסה החדשה
+                    askVersion(worker);
                 }
             };
 
