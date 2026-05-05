@@ -1,4 +1,4 @@
-const CACHE_NAME = 'limudim-v2';
+const CACHE_NAME = 'limudim-2026-05-05';
 const CORE_ASSETS = [
   './index.html',
   './manifest.json'
