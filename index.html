@@ -4,11 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>מעקב לימודים</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#333333">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="לימודים">
 
 
 
@@ -438,40 +433,6 @@
             transition: opacity 0.3s;
             box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         }
-
-        /* אינדיקטור אופליין קבוע */
-        #offlineBanner {
-            display: none;
-            position: fixed;
-            bottom: 16px;
-            left: 16px;
-            background: #b71c1c;
-            color: white;
-            padding: 7px 14px;
-            border-radius: 20px;
-            font-size: 12px;
-            z-index: 9998;
-            align-items: center;
-            gap: 6px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-            animation: pulse-offline 2.5s infinite;
-        }
-        #offlineBanner.show { display: flex; }
-
-        #pendingDot {
-            display: none;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #ffeb3b;
-            flex-shrink: 0;
-        }
-        #pendingDot.show { display: block; }
-
-        @keyframes pulse-offline {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.75; }
-        }
     </style>
 </head>
 <body>
@@ -667,13 +628,6 @@
     <div id="syncIndicator" style="position:fixed; bottom:16px; left:16px; background:#333; color:white; padding:7px 14px; border-radius:20px; font-size:12px; display:none; z-index:9999; align-items:center; gap:8px;">
         <span id="syncIcon">☁</span>
         <span id="syncText">מסנכרן...</span>
-    </div>
-
-    <!-- אינדיקטור אופליין קבוע -->
-    <div id="offlineBanner">
-        <span>📴</span>
-        <span id="offlineText">אין חיבור לרשת</span>
-        <div id="pendingDot" title="יש שינויים ממתינים לסנכרון"></div>
     </div>
 
     <script>
@@ -1177,6 +1131,7 @@
     let currentTrackDate = null;
     let currentMasechet = null;
     let currentPerek = null;
+    let _trackingChanged = false; // האם בוצע שינוי מאז פתיחת המודל
     let _pendingDeleteStudyId = null;
     let _pendingDeleteDisplayName = null;
 
@@ -1196,38 +1151,6 @@
         return learned;
     }
 
-    // =============================
-    //  אינדיקטור אופליין קבוע
-    // =============================
-    let _isOnline = navigator.onLine;
-
-    function updateOfflineBanner() {
-        _isOnline = navigator.onLine;
-        const banner = document.getElementById('offlineBanner');
-        if (!_isOnline) {
-            banner.classList.add('show');
-        } else {
-            banner.classList.remove('show');
-            // כשחוזר חיבור — נסה לסנכרן
-            flushPendingSync();
-        }
-    }
-
-    function updatePendingDot() {
-        const hasPending = localStorage.getItem('pendingSync') === 'true';
-        const dot = document.getElementById('pendingDot');
-        if (hasPending && !_isOnline) {
-            dot.classList.add('show');
-            document.getElementById('offlineText').textContent = 'אין חיבור — שינויים ממתינים';
-        } else {
-            dot.classList.remove('show');
-            document.getElementById('offlineText').textContent = 'אין חיבור לרשת';
-        }
-    }
-
-    window.addEventListener('online',  updateOfflineBanner);
-    window.addEventListener('offline', updateOfflineBanner);
-
     // =============================================
     // 🔧 הגדרות Firebase — שנה לפרויקט שלך!
     // =============================================
@@ -1242,7 +1165,7 @@
     const USER_ID = 'default_user';
 
     // =============================
-    //  אינדיקטור סנכרון זמני
+    //  אינדיקטור סנכרון
     // =============================
     function showSync(text, icon) {
         const ind = document.getElementById('syncIndicator');
@@ -1260,7 +1183,7 @@
     let _fbSave = null, _fbLoad = null;
 
     async function initFirebase() {
-        if (FIREBASE_CONFIG.apiKey === 'YOUR_API_KEY') return;
+        if (FIREBASE_CONFIG.apiKey === 'YOUR_API_KEY') return; // לא הוגדר
         try {
             const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
             const { getFirestore, doc, setDoc, getDoc, enableIndexedDbPersistence }
@@ -1288,54 +1211,21 @@
     }
 
     // =============================
-    //  ניסיון לסנכרן שינויים ממתינים
-    // =============================
-    async function flushPendingSync() {
-        if (!_fbSave) return;
-        if (localStorage.getItem('pendingSync') !== 'true') return;
-        try {
-            showSync('מסנכרן שינויים...', '☁');
-            await _fbSave(studies, trackingData);
-            localStorage.removeItem('pendingSync');
-            updatePendingDot();
-            showSync('סונכרן בהצלחה ✓', '✅');
-            hideSync();
-        } catch(e) {
-            // עדיין לא מצליח — נשאר ממתין
-        }
-    }
-
-    // =============================
     //  שמירה
     // =============================
     async function saveData() {
-        // תמיד שמור מקומית קודם
         localStorage.setItem('studies', JSON.stringify(studies));
         localStorage.setItem('trackingData', JSON.stringify(trackingData));
-
-        if (!_fbSave) return;
-
-        if (!navigator.onLine) {
-            // אין חיבור — סמן שיש שינויים ממתינים
-            localStorage.setItem('pendingSync', 'true');
-            updatePendingDot();
-            showSync('נשמר מקומית (אופליין)', '📴');
+        if (_fbSave) {
+            showSync('מסנכרן...', '☁');
+            try {
+                await _fbSave(studies, trackingData);
+                showSync('נשמר בענן ✓', '✅');
+            } catch(e) {
+                showSync('נשמר מקומית (אופליין)', '📴');
+            }
             hideSync();
-            return;
         }
-
-        showSync('מסנכרן...', '☁');
-        try {
-            await _fbSave(studies, trackingData);
-            localStorage.removeItem('pendingSync');
-            updatePendingDot();
-            showSync('נשמר בענן ✓', '✅');
-        } catch(e) {
-            localStorage.setItem('pendingSync', 'true');
-            updatePendingDot();
-            showSync('נשמר מקומית (אופליין)', '📴');
-        }
-        hideSync();
     }
 
     // =============================
@@ -1344,35 +1234,19 @@
     const dates = [];
 
     async function init() {
-        // עדכן אינדיקטור מצב חיבור מיד
-        updateOfflineBanner();
-        updatePendingDot();
-
         await initFirebase();
-
-        if (_fbLoad && navigator.onLine) {
+        if (_fbLoad) {
             showSync('טוען נתונים...', '☁');
             try {
                 const { studies: fbS, tracking: fbT } = await _fbLoad();
                 if (fbS !== null) { studies = fbS; localStorage.setItem('studies', JSON.stringify(studies)); }
                 if (fbT !== null) { trackingData = fbT; localStorage.setItem('trackingData', JSON.stringify(trackingData)); }
-                // אם טענו מענן בהצלחה — אין יותר pending
-                localStorage.removeItem('pendingSync');
-                updatePendingDot();
                 showSync('נטען מהענן ✓', '✅');
             } catch(e) {
-                showSync('טוען מקומית', '📱');
+                showSync('טוען מקומית (אופליין)', '📴');
             }
             hideSync();
-        } else if (_fbLoad && !navigator.onLine) {
-            // אופליין — השתמש בנתונים המקומיים כפי שהם
-            showSync('טוען מקומי (אופליין)', '📴');
-            hideSync();
         }
-
-        // אחרי טעינה — נסה לסנכרן pending אם יש חיבור
-        if (navigator.onLine) await flushPendingSync();
-
         const today = new Date();
         for (let i = 3; i >= 0; i--) {
             const d = new Date(today);
@@ -1546,6 +1420,7 @@
         currentTrackDate = dateStr;
         currentMasechet = null;
         currentPerek = null;
+        _trackingChanged = false; // איפוס — עדיין לא שונה כלום
 
         const study = studies.find(s => s.id === studyId);
         const displayName = study.name || getStudyTypeName(study.type);
@@ -2477,6 +2352,7 @@
             list.splice(idx, 1);
             cellEl.classList.remove('selected');
         }
+        _trackingChanged = true; // סומן שינוי
         // לא שומרים כאן — שמירה רק בלחיצת "סיום"
         renderTrackedItems();
     }
@@ -2508,6 +2384,7 @@
         const index = list.indexOf(itemString);
         if (index > -1) {
             list.splice(index, 1);
+            _trackingChanged = true; // סומן שינוי
             // לא שומרים כאן — שמירה רק בלחיצת "סיום"
             renderTrackedItems();
             // רענן את הגריד הפעיל
@@ -2531,9 +2408,14 @@
     //  שמירה וסגירה
     // =============================
     async function finishTracking() {
-        // נקה שדות ריקים שנוצרו מפתיחת המודל בלי לסמן כלום
+        // אם לא שונה כלום — סגור מיד, בלי סנכרון
+        if (!_trackingChanged) {
+            closeModals();
+            return;
+        }
+        // נקה שדות ריקים שנוצרו מפתיחת המודל בלי לסמן
         if (currentTrackStudyId && currentTrackDate) {
-            const dayItems = trackingData[currentTrackStudyId] && trackingData[currentTrackStudyId][currentTrackDate];
+            const dayItems = trackingData[currentTrackStudyId]?.[currentTrackDate];
             if (dayItems && dayItems.length === 0) {
                 delete trackingData[currentTrackStudyId][currentTrackDate];
             }
@@ -3081,17 +2963,6 @@
     }
 
     init();
-
-    // =============================
-    //  רישום Service Worker (PWA)
-    // =============================
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js')
-                .then(reg => console.log('Service Worker רשום:', reg.scope))
-                .catch(err => console.warn('שגיאה ברישום Service Worker:', err));
-        });
-    }
     </script>
 </body>
 </html>
