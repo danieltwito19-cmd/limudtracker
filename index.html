@@ -433,6 +433,78 @@
             transition: opacity 0.3s;
             box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         }
+
+        /* אינדיקטור אופליין קבוע */
+        #offlineBanner {
+            display: none;
+            position: fixed;
+            bottom: 16px;
+            left: 16px;
+            background: #b71c1c;
+            color: white;
+            padding: 7px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 9997;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            animation: pulse-offline 2.5s infinite;
+        }
+        #offlineBanner.show { display: flex; }
+        #pendingDot {
+            display: none;
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #ffeb3b;
+            flex-shrink: 0;
+        }
+        #pendingDot.show { display: block; }
+        @keyframes pulse-offline {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.75; }
+        }
+
+        /* באנר עדכון */
+        #updateBanner {
+            display: none;
+            position: fixed;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a237e;
+            color: white;
+            padding: 10px 18px;
+            border-radius: 24px;
+            font-size: 13px;
+            z-index: 9999;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+            white-space: nowrap;
+        }
+        #updateBanner.show { display: flex; }
+        #updateBtn {
+            background: white;
+            color: #1a237e;
+            border: none;
+            border-radius: 14px;
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* מספר גרסה */
+        #appVersion {
+            position: fixed;
+            bottom: 4px;
+            right: 8px;
+            font-size: 10px;
+            color: #bbb;
+            z-index: 100;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -625,10 +697,28 @@
     </div>
 
     <!-- אינדיקטור סנכרון -->
-    <div id="syncIndicator" style="position:fixed; bottom:16px; left:16px; background:#333; color:white; padding:7px 14px; border-radius:20px; font-size:12px; display:none; z-index:9999; align-items:center; gap:8px;">
+    <div id="syncIndicator" style="position:fixed; bottom:16px; left:16px; background:#333; color:white; padding:7px 14px; border-radius:20px; font-size:12px; display:none; z-index:9998; align-items:center; gap:8px;">
         <span id="syncIcon">☁</span>
         <span id="syncText">מסנכרן...</span>
     </div>
+
+    <!-- אינדיקטור אופליין -->
+    <div id="offlineBanner">
+        <span>📴</span>
+        <span id="offlineText">אין חיבור לרשת</span>
+        <div id="pendingDot" title="יש שינויים ממתינים לסנכרון"></div>
+    </div>
+
+    <!-- באנר עדכון גרסה -->
+    <div id="updateBanner">
+        <span>🆕 גרסה חדשה זמינה</span>
+        <button id="updateBtn" onclick="applyUpdate()">עדכן עכשיו</button>
+        <span onclick="document.getElementById('updateBanner').classList.remove('show')"
+              style="cursor:pointer; opacity:0.6; font-size:16px; padding-right:4px;">✕</span>
+    </div>
+
+    <!-- מספר גרסה -->
+    <div id="appVersion">v...</div>
 
     <script>
     // =============================
@@ -1152,7 +1242,7 @@
     }
 
     // =============================================
-    // 🔧 הגדרות Firebase — שנה לפרויקט שלך!
+    // 🔧 הגדרות Firebase
     // =============================================
     const FIREBASE_CONFIG = {
         apiKey: "AIzaSyCy8NmaBexusj0cUw4Bz4K5FMLt6dLVe7k",
@@ -1165,7 +1255,38 @@
     const USER_ID = 'default_user';
 
     // =============================
-    //  אינדיקטור סנכרון
+    //  אינדיקטור אופליין קבוע
+    // =============================
+    let _isOnline = navigator.onLine;
+
+    function updateOfflineBanner() {
+        _isOnline = navigator.onLine;
+        const banner = document.getElementById('offlineBanner');
+        if (!_isOnline) {
+            banner.classList.add('show');
+        } else {
+            banner.classList.remove('show');
+            flushPendingSync();
+        }
+    }
+
+    function updatePendingDot() {
+        const hasPending = localStorage.getItem('pendingSync') === 'true';
+        const dot = document.getElementById('pendingDot');
+        if (hasPending && !_isOnline) {
+            dot.classList.add('show');
+            document.getElementById('offlineText').textContent = 'אין חיבור — שינויים ממתינים';
+        } else {
+            dot.classList.remove('show');
+            document.getElementById('offlineText').textContent = 'אין חיבור לרשת';
+        }
+    }
+
+    window.addEventListener('online',  updateOfflineBanner);
+    window.addEventListener('offline', updateOfflineBanner);
+
+    // =============================
+    //  אינדיקטור סנכרון זמני
     // =============================
     function showSync(text, icon) {
         const ind = document.getElementById('syncIndicator');
@@ -1183,7 +1304,7 @@
     let _fbSave = null, _fbLoad = null;
 
     async function initFirebase() {
-        if (FIREBASE_CONFIG.apiKey === 'YOUR_API_KEY') return; // לא הוגדר
+        if (FIREBASE_CONFIG.apiKey === 'YOUR_API_KEY') return;
         try {
             const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
             const { getFirestore, doc, setDoc, getDoc, enableIndexedDbPersistence }
@@ -1211,21 +1332,50 @@
     }
 
     // =============================
+    //  סנכרון ממתין
+    // =============================
+    async function flushPendingSync() {
+        if (!_fbSave) return;
+        if (localStorage.getItem('pendingSync') !== 'true') return;
+        try {
+            showSync('מסנכרן שינויים...', '☁');
+            await _fbSave(studies, trackingData);
+            localStorage.removeItem('pendingSync');
+            updatePendingDot();
+            showSync('סונכרן בהצלחה ✓', '✅');
+            hideSync();
+        } catch(e) {}
+    }
+
+    // =============================
     //  שמירה
     // =============================
     async function saveData() {
         localStorage.setItem('studies', JSON.stringify(studies));
         localStorage.setItem('trackingData', JSON.stringify(trackingData));
-        if (_fbSave) {
-            showSync('מסנכרן...', '☁');
-            try {
-                await _fbSave(studies, trackingData);
-                showSync('נשמר בענן ✓', '✅');
-            } catch(e) {
-                showSync('נשמר מקומית (אופליין)', '📴');
-            }
+
+        if (!_fbSave) return;
+
+        if (!navigator.onLine) {
+            localStorage.setItem('pendingSync', 'true');
+            updatePendingDot();
+            showSync('נשמר מקומית (אופליין)', '📴');
             hideSync();
+            return;
         }
+
+        showSync('מסנכרן...', '☁');
+        try {
+            await _fbSave(studies, trackingData);
+            localStorage.removeItem('pendingSync');
+            updatePendingDot();
+            showSync('נשמר בענן ✓', '✅');
+        } catch(e) {
+            localStorage.setItem('pendingSync', 'true');
+            updatePendingDot();
+            showSync('נשמר מקומית (אופליין)', '📴');
+        }
+        hideSync();
     }
 
     // =============================
@@ -1234,19 +1384,28 @@
     const dates = [];
 
     async function init() {
+        updateOfflineBanner();
+        updatePendingDot();
+
         await initFirebase();
-        if (_fbLoad) {
+
+        if (_fbLoad && navigator.onLine) {
             showSync('טוען נתונים...', '☁');
             try {
                 const { studies: fbS, tracking: fbT } = await _fbLoad();
                 if (fbS !== null) { studies = fbS; localStorage.setItem('studies', JSON.stringify(studies)); }
                 if (fbT !== null) { trackingData = fbT; localStorage.setItem('trackingData', JSON.stringify(trackingData)); }
+                localStorage.removeItem('pendingSync');
+                updatePendingDot();
                 showSync('נטען מהענן ✓', '✅');
             } catch(e) {
-                showSync('טוען מקומית (אופליין)', '📴');
+                showSync('טוען מקומית', '📱');
             }
             hideSync();
         }
+
+        if (navigator.onLine) await flushPendingSync();
+
         const today = new Date();
         for (let i = 3; i >= 0; i--) {
             const d = new Date(today);
@@ -2963,6 +3122,56 @@
     }
 
     init();
+
+    // =============================
+    //  Service Worker + עדכונים
+    // =============================
+    let _swWaitingWorker = null;
+
+    function applyUpdate() {
+        if (_swWaitingWorker) {
+            _swWaitingWorker.postMessage('SKIP_WAITING');
+        }
+    }
+
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').then(reg => {
+
+            // קבל גרסה מה-SW הפעיל
+            if (navigator.serviceWorker.controller) {
+                const mc = new MessageChannel();
+                mc.port1.onmessage = e => {
+                    if (e.data && e.data.type === 'VERSION') {
+                        document.getElementById('appVersion').textContent = 'v' + e.data.version;
+                    }
+                };
+                navigator.serviceWorker.controller.postMessage('GET_VERSION', [mc.port2]);
+            }
+
+            // SW חדש ממתין — הצג באנר עדכון
+            const checkWaiting = (worker) => {
+                if (worker && worker.state === 'installed' && navigator.serviceWorker.controller) {
+                    _swWaitingWorker = worker;
+                    document.getElementById('updateBanner').classList.add('show');
+                }
+            };
+
+            if (reg.waiting) checkWaiting(reg.waiting);
+
+            reg.addEventListener('updatefound', () => {
+                const newWorker = reg.installing;
+                newWorker.addEventListener('statechange', () => {
+                    checkWaiting(newWorker);
+                });
+            });
+
+        }).catch(err => console.warn('SW error:', err));
+
+        // כשה-SW החדש משתלט — רענן את הדף
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            window.location.reload();
+        });
+    }
     </script>
 </body>
 </html>
