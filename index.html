@@ -723,7 +723,7 @@
     </div>
 
     <!-- מספר גרסה -->
-    <div id="appVersion"></div>
+    <div id="appVersion">v...</div>
 
     <script>
     // =============================
@@ -3134,9 +3134,11 @@
     let _swWaitingWorker = null;
 
     function applyUpdate() {
-        if (_swWaitingWorker) {
-            _swWaitingWorker.postMessage('SKIP_WAITING');
-        }
+        if (!_swWaitingWorker) return;
+        // מסתיר את הבאנר מיד
+        document.getElementById('updateBanner').classList.remove('show');
+        // מבקש מה-SW להתקין — הוא יבנה קאש חדש ואז יקרא skipWaiting
+        _swWaitingWorker.postMessage('SKIP_WAITING');
     }
 
     if ('serviceWorker' in navigator) {
@@ -3153,26 +3155,23 @@
                 worker.postMessage('GET_VERSION', [mc.port2]);
             };
 
-            // אם ה-SW כבר שולט — שאל אותו ישירות
             if (navigator.serviceWorker.controller) {
                 askVersion(navigator.serviceWorker.controller);
             }
 
-            // כשה-SW ישתלט (גם בפעם הראשונה) — שאל שוב
+            // כשה-SW ישתלט — עדכן גרסה מוצגת
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 if (navigator.serviceWorker.controller) {
                     askVersion(navigator.serviceWorker.controller);
                 }
             });
 
-            }
-
-            // SW חדש ממתין — הצג באנר עדכון + עדכן גרסה
+            // SW חדש ממתין — הצג באנר עדכון
             const checkWaiting = (worker) => {
                 if (worker && worker.state === 'installed') {
                     _swWaitingWorker = worker;
                     document.getElementById('updateBanner').classList.add('show');
-                    askVersion(worker);
+                    askVersion(worker); // הצג את מספר הגרסה החדשה
                 }
             };
 
@@ -3187,8 +3186,11 @@
 
         }).catch(err => console.warn('SW error:', err));
 
-        // כשה-SW החדש משתלט — רענן את הדף
+        // כשה-SW החדש השלים את ההשתלטות — רענן בבטחה
+        let _reloading = false;
         navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (_reloading) return;
+            _reloading = true;
             window.location.reload();
         });
     }
