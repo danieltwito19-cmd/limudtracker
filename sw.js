@@ -1,33 +1,39 @@
-const VERSION = '1.0.3';
+const VERSION = '1.0.4';
 const CACHE_NAME = `limudim-${VERSION}`;
 const CORE_ASSETS = [
   './index.html',
   './manifest.json'
 ];
 
-// ===== התקנה =====
+// ===== התקנה — בנה קאש חדש =====
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(CORE_ASSETS))
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(CORE_ASSETS))
+      // רק אחרי שהקאש מוכן לחלוטין — אפשר להמשיך
   );
-  // אל תחכה לכל הלקוחות שייסגרו — עבור ל-activate מיד
-  // (self.skipWaiting לא נקרא כאן בכוונה — נחכה לאישור המשתמש)
+  // לא קוראים skipWaiting כאן — ממתינים לאישור המשתמש
 });
 
-// ===== הפעלה — נקה קאש ישן =====
+// ===== הפעלה — נקה קאש ישן בלי clients.claim =====
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
       Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
     )
+    // אין self.clients.claim() — מונע השתלטות על דפים ישנים
   );
-  self.clients.claim();
 });
 
 // ===== הודעות מהאפליקציה =====
 self.addEventListener('message', event => {
   if (event.data === 'SKIP_WAITING') {
-    self.skipWaiting();
+    // לפני skipWaiting — ודא שהקאש החדש מוכן
+    event.waitUntil(
+      caches.open(CACHE_NAME)
+        .then(cache => cache.addAll(CORE_ASSETS))
+        .then(() => self.skipWaiting())
+    );
   }
   if (event.data === 'GET_VERSION') {
     event.source.postMessage({ type: 'VERSION', version: VERSION });
@@ -48,27 +54,20 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // קבצי האפליקציה — Cache First עם עדכון ברקע
+  // Network First — תמיד נסה רשת קודם, קאש רק כגיבוי
   event.respondWith(
-    caches.open(CACHE_NAME).then(async cache => {
-      const cached = await cache.match(event.request);
-
-      const networkPromise = fetch(event.request).then(response => {
+    fetch(event.request)
+      .then(response => {
         if (response && response.status === 200 && response.type === 'basic') {
-          cache.put(event.request, response.clone());
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
         return response;
-      }).catch(() => null);
-
-      if (cached) {
-        networkPromise; // עדכן ברקע
-        return cached;
-      }
-
-      const fromNet = await networkPromise;
-      if (fromNet) return fromNet;
-
-      return cache.match('./index.html');
-    })
+      })
+      .catch(() => {
+        // אין רשת — השתמש בקאש
+        return caches.match(event.request)
+          .then(cached => cached || caches.match('./index.html'));
+      })
   );
 });
