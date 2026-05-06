@@ -723,7 +723,7 @@
     </div>
 
     <!-- מספר גרסה -->
-    <div id="appVersion">v...</div>
+    <div id="appVersion"></div>
 
     <script>
     // =============================
@@ -3142,7 +3142,7 @@
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').then(reg => {
 
-            // קבל גרסה — נסה מה-SW הפעיל, ואם אין fallback לקריאת sw.js ישירות
+            // קבל גרסה מה-SW
             const askVersion = (worker) => {
                 const mc = new MessageChannel();
                 mc.port1.onmessage = e => {
@@ -3153,28 +3153,25 @@
                 worker.postMessage('GET_VERSION', [mc.port2]);
             };
 
+            // אם ה-SW כבר שולט — שאל אותו ישירות
             if (navigator.serviceWorker.controller) {
                 askVersion(navigator.serviceWorker.controller);
-            } else {
-                // SW הותקן עכשיו — חכה שישתלט ואז שאל
-                navigator.serviceWorker.addEventListener('controllerchange', () => {
-                    if (navigator.serviceWorker.controller) {
-                        askVersion(navigator.serviceWorker.controller);
-                    }
-                }, { once: true });
-                // fallback: קרא את sw.js וחלץ את הגרסה בעצמנו
-                fetch('./sw.js').then(r => r.text()).then(text => {
-                    const m = text.match(/VERSION\s*=\s*['"]([^'"]+)['"]/);
-                    if (m) document.getElementById('appVersion').textContent = 'v' + m[1];
-                }).catch(() => {});
             }
 
-            // SW חדש ממתין — הצג באנר עדכון
+            // כשה-SW ישתלט (גם בפעם הראשונה) — שאל שוב
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (navigator.serviceWorker.controller) {
+                    askVersion(navigator.serviceWorker.controller);
+                }
+            });
+
+            }
+
+            // SW חדש ממתין — הצג באנר עדכון + עדכן גרסה
             const checkWaiting = (worker) => {
                 if (worker && worker.state === 'installed') {
                     _swWaitingWorker = worker;
                     document.getElementById('updateBanner').classList.add('show');
-                    // הצג גם את הגרסה החדשה
                     askVersion(worker);
                 }
             };
